@@ -8,7 +8,7 @@ module.exports = {
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],
   coveragePathIgnorePatterns: ['/node_modules/'],
-  testMatch: ['**/*.test.js'],
+  testMatch: ['**/tests/**/*.test.js'],
   testPathIgnorePatterns: ['/node_modules/'],
   // Setup files to run before tests
   // setupFilesAfterEnv: ['./server/tests/setup.js'],

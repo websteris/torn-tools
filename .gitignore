@@ -2,3 +2,10 @@ node_modules/
 *.log
 .env
 config/apikeys.js
+package-lock.json
+*.db
+# Test coverage
+coverage/
+server/coverage/
+**/coverage/
+*.lcov

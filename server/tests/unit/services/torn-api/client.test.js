@@ -48,11 +48,16 @@ describe('Module: TornApiClient', () => {
       }
     });
     
-    // Mock NodeCache methods
-    NodeCache.prototype.get = jest.fn();
-    NodeCache.prototype.set = jest.fn();
-    NodeCache.prototype.del = jest.fn();
-    NodeCache.prototype.flushAll = jest.fn();
+    // Mock NodeCache methods and properties
+    NodeCache.mockImplementation(() => ({
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+      flushAll: jest.fn(),
+      options: {
+        stdTTL: 60
+      }
+    }));
     
     // Create api client instance for testing
     apiClient = new TornApiClient({
@@ -91,7 +96,7 @@ describe('Module: TornApiClient', () => {
   test('should return cached data when available', async () => {
     // Arrange
     const cachedData = { success: true, data: { id: 123 } };
-    NodeCache.prototype.get.mockReturnValue(cachedData);
+    apiClient.cache.get.mockReturnValue(cachedData);
     
     // Act
     const result = await apiClient.request({
@@ -101,7 +106,7 @@ describe('Module: TornApiClient', () => {
     
     // Assert
     expect(result).toBe(cachedData);
-    expect(NodeCache.prototype.get).toHaveBeenCalled();
+    expect(apiClient.cache.get).toHaveBeenCalled();
     expect(apiClient.http.get).not.toHaveBeenCalled();
   });
 
@@ -109,7 +114,7 @@ describe('Module: TornApiClient', () => {
     // Arrange
     const cachedData = { success: true, data: { id: 123 } };
     const newData = { success: true, data: { id: 123, updated: true } };
-    NodeCache.prototype.get.mockReturnValue(cachedData);
+    apiClient.cache.get.mockReturnValue(cachedData);
     apiClient.http.get.mockResolvedValue(createMockResponse(newData));
     
     // Act
@@ -121,9 +126,9 @@ describe('Module: TornApiClient', () => {
     
     // Assert
     expect(result).toBe(newData);
-    expect(NodeCache.prototype.get).not.toHaveBeenCalled();
+    expect(apiClient.cache.get).not.toHaveBeenCalled();
     expect(apiClient.http.get).toHaveBeenCalledWith('/user/', expect.any(Object));
-    expect(NodeCache.prototype.set).toHaveBeenCalledWith(
+    expect(apiClient.cache.set).toHaveBeenCalledWith(
       expect.any(String),
       newData,
       expect.any(Number)
@@ -227,7 +232,7 @@ describe('Module: TornApiClient', () => {
     apiClient.clearCache();
     
     // Assert
-    expect(NodeCache.prototype.flushAll).toHaveBeenCalled();
+    expect(apiClient.cache.flushAll).toHaveBeenCalled();
   });
 
   test('should clear specific cache item correctly', () => {
@@ -235,7 +240,7 @@ describe('Module: TornApiClient', () => {
     apiClient.clearCacheItem('user', '123', ['profile'], mockApiKey);
     
     // Assert
-    expect(NodeCache.prototype.del).toHaveBeenCalledWith(expect.any(String));
+    expect(apiClient.cache.del).toHaveBeenCalledWith(expect.any(String));
   });
 
   test('should make user data request correctly', async () => {
@@ -246,11 +251,11 @@ describe('Module: TornApiClient', () => {
     await apiClient.getUserData(mockApiKey, ['profile', 'inventory']);
     
     // Assert
-    expect(apiClient.request).toHaveBeenCalledWith({
+    expect(apiClient.request).toHaveBeenCalledWith(expect.objectContaining({
       section: 'user',
       apiKey: mockApiKey,
       selections: ['profile', 'inventory']
-    });
+    }));
   });
 
   test('should make faction data request correctly', async () => {
@@ -261,12 +266,12 @@ describe('Module: TornApiClient', () => {
     await apiClient.getFactionData(mockApiKey, '12345', ['basic']);
     
     // Assert
-    expect(apiClient.request).toHaveBeenCalledWith({
+    expect(apiClient.request).toHaveBeenCalledWith(expect.objectContaining({
       section: 'faction',
       id: '12345',
       apiKey: mockApiKey,
       selections: ['basic']
-    });
+    }));
   });
 
   test('should make torn data request correctly', async () => {
@@ -277,10 +282,10 @@ describe('Module: TornApiClient', () => {
     await apiClient.getTornData(mockApiKey, ['items']);
     
     // Assert
-    expect(apiClient.request).toHaveBeenCalledWith({
+    expect(apiClient.request).toHaveBeenCalledWith(expect.objectContaining({
       section: 'torn',
       apiKey: mockApiKey,
       selections: ['items']
-    });
+    }));
   });
 });

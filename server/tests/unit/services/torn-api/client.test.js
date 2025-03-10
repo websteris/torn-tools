@@ -1,10 +1,22 @@
 /**
  * @jest-environment node
  */
+// Test configuration import with error handling
+let testConfig;
+try {
+  testConfig = require('../../../../config/test-config');
+} catch (error) {
+  console.error('Test configuration file missing. Copy config/test-config.example.js to config/test-config.js and add your credentials.');
+  process.exit(1);
+}
 
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const TornApiClient = require('../../../../services/torn-api/client');
+
+
+
+
 
 // Mock dependencies
 jest.mock('axios');
@@ -29,7 +41,7 @@ const createMockResponse = (data) => ({
 
 describe('Module: TornApiClient', () => {
   let apiClient;
-  const mockApiKey = 'test_api_key';
+  const mockApiKey = testConfig.apiKeys.test;
   
   beforeEach(() => {
     // Reset mocks

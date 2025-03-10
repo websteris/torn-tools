@@ -4,6 +4,7 @@ node_modules/
 config/apikeys.js
 package-lock.json
 *.db
+server/config/test-config.js
 # Test coverage
 coverage/
 server/coverage/

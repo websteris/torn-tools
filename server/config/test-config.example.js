@@ -14,6 +14,8 @@ module.exports = {
   testUser: {
     id: 12345,  // Your test user ID
     name: 'TestUser',
-    torn_id: 67890
+    torn_id: 67890,
+    faction_id: 10000,
+    faction_name: 'Test Faction'
   }
 };

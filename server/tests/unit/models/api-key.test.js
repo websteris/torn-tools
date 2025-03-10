@@ -68,9 +68,6 @@ describe('Module: ApiKeyModel', () => {
   
   describe('_encryptApiKey and _decryptApiKey', () => {
     test('should encrypt and decrypt API key correctly', () => {
-      // This is testing private methods, normally not recommended
-      // but important for security-critical functions
-      
       // Arrange
       const plainKey = 'test_api_key_123';
       
@@ -83,6 +80,16 @@ describe('Module: ApiKeyModel', () => {
       expect(decrypted).toBe('decrypteddata');
       expect(crypto.createCipheriv).toHaveBeenCalled();
       expect(crypto.createDecipheriv).toHaveBeenCalled();
+    });
+    
+    test('should throw error if encrypted key format is invalid', () => {
+      // Arrange
+      const invalidEncrypted = 'invalidformatwithoutcolon';
+      
+      // Act & Assert
+      expect(() => {
+        apiKeyModel._decryptApiKey(invalidEncrypted);
+      }).toThrow('Invalid encrypted API key format');
     });
   });
   
@@ -198,6 +205,21 @@ describe('Module: ApiKeyModel', () => {
       expect(result).toEqual([]);
       expect(mockDb.close).toHaveBeenCalled();
     });
+    
+    test('should handle database error', async () => {
+      // Arrange
+      const userId = 1;
+      const dbError = new Error('Database error');
+      
+      // Mock the all method to return an error
+      mockDb.all.mockImplementation((query, params, callback) => {
+        callback(dbError, null);
+      });
+      
+      // Act & Assert
+      await expect(apiKeyModel.findByUserId(userId)).rejects.toThrow('Database error');
+      expect(mockDb.close).toHaveBeenCalled();
+    });
   });
   
   describe('getKeyValue', () => {
@@ -261,6 +283,212 @@ describe('Module: ApiKeyModel', () => {
       
       // Act & Assert
       await expect(apiKeyModel.getKeyValue(id, userId)).rejects.toThrow('API key not found or not active');
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+  });
+  
+  describe('findById', () => {
+    test('should return API key by ID', async () => {
+      // Arrange
+      const id = 5;
+      const userId = 1;
+      const mockKey = {
+        id: 5,
+        user_id: userId,
+        key_name: 'Test Key',
+        encrypted: 1,
+        active: 1
+      };
+      
+      // Mock the get method to return a key
+      mockDb.get.mockImplementation((query, params, callback) => {
+        callback(null, mockKey);
+      });
+      
+      // Act
+      const result = await apiKeyModel.findById(id, userId);
+      
+      // Assert
+      expect(result).toEqual(mockKey);
+      expect(mockDb.get).toHaveBeenCalledWith(
+        expect.stringContaining('SELECT'),
+        [id, userId],
+        expect.any(Function)
+      );
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+    
+    test('should return null if key not found', async () => {
+      // Arrange
+      const id = 5;
+      const userId = 1;
+      
+      // Mock the get method to return null
+      mockDb.get.mockImplementation((query, params, callback) => {
+        callback(null, null);
+      });
+      
+      // Act
+      const result = await apiKeyModel.findById(id, userId);
+      
+      // Assert
+      expect(result).toBeNull();
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+  });
+  
+
+	describe('update', () => {
+  test('should update API key and return updated data', async () => {
+    // Arrange
+    const id = 5;
+    const userId = 1;
+    const updateData = {
+      key_name: 'Updated Key Name',
+      active: false
+    };
+
+    const updatedKey = {
+      id: 5,
+      user_id: userId,
+      key_name: 'Updated Key Name',
+      encrypted: 1,
+      active: 0
+    };
+
+    // Mock the serialize method
+    mockDb.serialize.mockImplementation(callback => {
+      callback();
+    });
+
+    // Mock the run method for TRANSACTION statements
+    mockDb.run.mockImplementation(function(query, ...args) {
+      // The update method in api-key.js has different implementations for run
+      // This handles both patterns
+      if (query === 'BEGIN TRANSACTION' || query === 'ROLLBACK' || query === 'COMMIT') {
+        // No callback for transaction statements
+        return;
+      }
+
+      // For update query, we need the callback to be called
+      const callback = args.length === 1 ? args[0] : args[1];
+      if (typeof callback === 'function') {
+        callback.call({ changes: 1 }, null);
+      }
+    });
+
+    // Mock the get method to return an existing key
+    mockDb.get.mockImplementation((query, params, callback) => {
+      if (query.includes('SELECT id, key_value, encrypted')) {
+        callback(null, {
+          id: 5,
+          key_value: '0123456789abcdef:encrypteddata',
+          encrypted: 1
+        });
+      } else {
+        callback(null, updatedKey);
+      }
+    });
+
+    // Act
+    const result = await apiKeyModel.update(id, userId, updateData);
+
+    // Assert
+    expect(result).toEqual(updatedKey);
+    expect(mockDb.serialize).toHaveBeenCalled();
+    expect(mockDb.get).toHaveBeenCalled();
+    expect(mockDb.close).toHaveBeenCalled();
+  });
+
+  test('should throw error if key not found', async () => {
+    // Arrange
+    const id = 5;
+    const userId = 1;
+    const updateData = {
+      key_name: 'Updated Key Name'
+    };
+
+    // Mock the serialize method
+    mockDb.serialize.mockImplementation(callback => {
+      callback();
+    });
+
+    // Mock the get method to return null (key not found)
+    mockDb.get.mockImplementation((query, params, callback) => {
+      callback(null, null);
+    });
+
+    // Mock run for transaction statements
+    mockDb.run.mockImplementation(function(query) {
+      // Just handle transaction statements, no callbacks needed
+    });
+
+    // Act & Assert
+    await expect(apiKeyModel.update(id, userId, updateData)).rejects.toThrow(/not found/);
+    expect(mockDb.close).toHaveBeenCalled();
+  });
+});
+
+  describe('delete', () => {
+    test('should delete API key and return true', async () => {
+      // Arrange
+      const id = 5;
+      const userId = 1;
+      
+      // Mock the run method to indicate successful deletion
+      mockDb.run.mockImplementation(function(query, params, callback) {
+        callback.call({ changes: 1 }, null);
+      });
+      
+      // Act
+      const result = await apiKeyModel.delete(id, userId);
+      
+      // Assert
+      expect(result).toBe(true);
+      expect(mockDb.run).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM api_keys'),
+        [id, userId],
+        expect.any(Function)
+      );
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+    
+    test('should throw error if key not found', async () => {
+      // Arrange
+      const id = 5;
+      const userId = 1;
+      
+      // Mock the run method to indicate no deletion
+      mockDb.run.mockImplementation(function(query, params, callback) {
+        callback.call({ changes: 0 }, null);
+      });
+      
+      // Act & Assert
+      await expect(apiKeyModel.delete(id, userId)).rejects.toThrow(/not found/);
+      expect(mockDb.close).toHaveBeenCalled();
+    });
+  });
+  
+  describe('deleteAllForUser', () => {
+    test('should delete all user API keys and return count', async () => {
+      // Arrange
+      const userId = 1;
+      
+      // Mock the run method to indicate successful deletions
+      mockDb.run.mockImplementation(function(query, params, callback) {
+        callback.call({ changes: 3 }, null);
+      });
+      
+      // Act
+      const result = await apiKeyModel.deleteAllForUser(userId);
+      
+      // Assert
+      expect(result).toBe(3);
+      expect(mockDb.run).toHaveBeenCalledWith(
+        expect.stringContaining('DELETE FROM api_keys WHERE user_id = ?'),
+        [userId],
+        expect.any(Function)
+      );
       expect(mockDb.close).toHaveBeenCalled();
     });
   });

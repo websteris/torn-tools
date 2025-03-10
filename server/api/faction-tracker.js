@@ -259,33 +259,64 @@ router.get('/war/:warId/:warType', authenticate, async (req, res) => {
   try {
     const warId = req.params.warId;
     const warType = req.params.warType;
-    
+
     if (!warId || !warType) {
       return res.status(400).json({
         success: false,
         message: 'War ID and war type are required'
       });
     }
-    
+
     const warDetails = await warTracker.getWarDetails(warId, warType);
-    
+
     if (!warDetails) {
       return res.status(404).json({
         success: false,
         message: `No details found for war ${warId}`
       });
     }
-    
+
     res.json({
       success: true,
       war: warDetails
     });
   } catch (error) {
     logger.error(`Error getting war details: ${error.message}`);
-    
+
     res.status(500).json({
       success: false,
       message: error.message || 'Error getting war details'
+    });
+  }
+});
+
+/**
+ * Get factions currently at war with a faction
+ * GET /api/faction-tracker/faction/:factionId/opponents
+ */
+router.get('/faction/:factionId/opponents', authenticate, async (req, res) => {
+  try {
+    const factionId = req.params.factionId;
+
+    if (!factionId) {
+      return res.status(400).json({
+        success: false,
+        message: 'Faction ID is required'
+      });
+    }
+
+    const opponents = await warTracker.getWarOpponents(factionId);
+
+    res.json({
+      success: true,
+      opponents
+    });
+  } catch (error) {
+    logger.error(`Error getting war opponents: ${error.message}`);
+
+    res.status(500).json({
+      success: false,
+      message: error.message || 'Error getting war opponents'
     });
   }
 });

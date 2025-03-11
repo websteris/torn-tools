@@ -1,309 +1,246 @@
-# Torn Dashboard Project: Current Status
+# Torn Dashboard Project Status
 
 ## Project Overview
-A modular dashboard for the Torn game with integrated tools and scripts. This dashboard will consolidate various existing scripts and tools into one cohesive interface.
+Torn Dashboard is a comprehensive web application designed to provide advanced tracking and data visualization for the online game Torn. The project aims to consolidate various existing scripts and tools into a cohesive, modular interface that helps players manage and analyze their game data.
 
 ## Technology Stack
-
 - **Frontend**: Vue.js
-- **Backend**: Node.js
+- **Backend**: Node.js with Express.js
 - **Database**: SQLite3
-- **API Integration**: Torn API + Custom API
+- **Authentication**: Custom JWT-based system
+- **Logging**: Winston logger
 
 ## Core Development Principles
+1. Modularity First: All components must be self-contained with clear interfaces
+2. Comprehensive Documentation
+3. Complete and Robust Code
+4. Clear Component Interfaces
+5. Test-Driven Development
 
-- **Modularity First**: All components must be self-contained with clear interfaces
-- **Documentation Required**: Thorough documentation for all modules
-- **Complete Code**: Always provide complete files, not snippets
-- **Clear Interfaces**: Components should communicate through well-defined APIs
-- **Test-Driven Development**: Each module requires test cases to validate functionality
+## Architecture
+### Backend
+- **Framework**: Express.js
+- **Database Connection**: SQLite with custom connection management
+- **Authentication**: Custom middleware-based JWT authentication
+- **Logging**: Centralized logging using Winston
 
-## Project Status
+### Key Components
+1. User Management
+2. API Key Management
+3. Faction Tracker
+4. Data Retrieval Services
+5. War Tracking
 
-### Current Focus
-
-- Testing the faction tracker and war tracking functionality
-- Setting up the frontend components
-- Implementing user interface for faction tracking
+## Current Project Status
 
 ### Completed Components
-
-- Torn API client (with rate limiting, caching, and error handling)
-- Database schema design and implementation
-- User and API key models
-- API routes for key management
-- Project structure setup
-- Server configuration
-- Basic server setup
-- Database initialization
+- Base Express server setup
+- Database schema and initialization scripts
 - User authentication system
-- Data polling service
-- Data access API endpoints
-- Faction tracker service (with member tracking and war monitoring)
+- API key management
+- Basic data retrieval endpoints
+- User model with comprehensive CRUD operations
+- Database connection and initialization logic
+- API routes for various services
 
-### In-Progress Components
+### Working Components
+- User authentication
+- API key storage and management
+- Basic data retrieval
+- Database schema initialization
 
-- Frontend dashboard layout
+### Temporarily Disabled Components
+- Faction tracker service (currently commented out in server configuration)
 
-### Next Components to Implement
+### Recent Fixes
+- Implemented class-based user model with robust methods
+- Corrected database connection imports
+- Enhanced error handling in database operations
+- Improved database schema with more comprehensive table structures
 
-- User interface for faction tracker
+### Pending Tasks
+- Re-enable and thoroughly test faction tracker service
+- Complete implementation of war tracking functionality
+- Develop comprehensive test coverage
+- Implement rate limiting for API requests
+- Build frontend dashboard components
 
-## Component Details
+## Database Schema
+The SQLite database includes tables for:
+- Users
+- API Keys
+- Tracked Factions
+- Cached Data
+- User Settings
+- Notification Configurations
 
-### Torn API Client
-- **Status**: Completed
-- **Purpose**: Handles communication with Torn's API, including authentication, rate limiting, and caching
-- **Current Challenges**: None - Implementation complete with proper rate limiting and error handling
-- **Files**:
-  - `server/services/torn-api/client.js`
-  - `server/config/api-config.js`
-  - `server/services/torn-api/example-service.js`
-  - `server/tests/unit/services/torn-api/client.test.js`
+### Key Tables Structure
+1. **Users Table**
+   - Unique identifiers
+   - Authentication details
+   - Torn game-specific information
+   - Timestamps for tracking
 
-### Database System
-- **Status**: Implemented
-- **Purpose**: Stores user data, API keys, and game information
-- **Current Challenges**: Testing database concurrency and performance
-- **Files**:
-  - `server/db/schema.js`
-  - `server/db/models/user.js`
-  - `server/db/models/api-key.js`
+2. **API Keys Table**
+   - User association
+   - Encrypted API key storage
+   - Labeling and management features
 
-### API Routes
-- **Status**: Implemented
-- **Purpose**: Provides endpoints for managing API keys and user data
-- **Current Challenges**: Need to test with real Torn API data
-- **Files**:
-  - `server/api/index.js`
-  - `server/api/api-keys.js`
-  - `server/api/auth.js`
-  - `server/api/data.js`
-  - `server/api/test.js`
+3. **Tracked Factions Table**
+   - User-specific faction tracking
+   - Polling interval configurations
+   - Target faction details
 
-### Authentication System
-- **Status**: Implemented, needs testing
-- **Purpose**: Manages user registration and authentication using Torn API keys
-- **Current Challenges**: Need to test the full authentication flow
-- **Files**:
-  - `server/services/auth/auth-service.js`
-  - `server/api/auth.js`
-  - `server/middleware/auth.js`
+## Implementation Patterns
 
-### Data Polling Service
-- **Status**: Implemented
-- **Purpose**: Regularly fetches and caches data from the Torn API
-- **Current Challenges**: Need to tune polling intervals based on usage
-- **Files**:
-  - `server/services/polling/polling-service.js`
-  - `server/services/data/data-service.js`
-
-### Settings Management
-- **Status**: Partially implemented (through API key model)
-- **Purpose**: Securely stores user preferences and API keys
-- **Current Challenges**: Needs integration with user authentication
-- **Files**: 
-  - `server/db/models/api-key.js` (encryption implemented)
-
-### Faction Tracker System
-- **Status**: Implemented, needs testing
-- **Purpose**: Tracks faction data, members, and war activities
-- **Current Challenges**: Testing with real Torn API data and optimizing polling frequency
-- **Files**:
-  - `server/services/faction-tracker/faction-tracker-service.js`
-  - `server/services/faction-tracker/faction-poller.js`
-  - `server/services/faction-tracker/api-key-manager.js`
-  - `server/services/faction-tracker/data-processor.js`
-  - `server/services/faction-tracker/war-tracker.js`
-  - `server/api/faction-tracker.js`
-  - `server/scripts/init-faction-db.js`
-
-### Flight Tracker Module
-- **Status**: Not started
-- **Purpose**: Tracks and displays flight information in Torn
-- **Current Challenges**: Needs to efficiently poll the API and visualize flight data
-- **Files**: Not yet created
-
-## Implementation Notes
-
-### Important Considerations
-
-- API calls need to be carefully managed due to rate limits
-- SQLite should be configured for proper concurrency
-- Frontend and backend need clear API contracts
-- All modules must operate independently for maintainability
-
-### Recent Decisions
-
-- Decided to rebuild from scratch focusing on modularity
-- Implemented secure encryption for API keys
-- Created a flexible database schema supporting multiple modules
-- Implemented proper error handling throughout the system
-
-## Code Example Structure
-When providing code, please follow this structure:
+### Database Model Pattern
 ```javascript
-/**
- * @module ModuleName
- * @description Brief description of this module's purpose
- */
-
-// Dependencies
-const dependencyOne = require('dependency-one');
-const dependencyTwo = require('dependency-two');
-
-/**
- * @function functionName
- * @description What this function does
- * @param {Type} paramName - Parameter description
- * @returns {Type} Return value description
- */
-function functionName(paramName) {
-  // Implementation
-  return result;
+class ModelName {
+  async methodName() {
+    return new Promise((resolve, reject) => {
+      const db = getConnection();
+      // Database operation implementation
+      // Ensure db.close() is called
+    });
+  }
 }
-
-// Exports
-module.exports = {
-  functionName,
-  // Other exports
-};
+module.exports = new ModelName();
 ```
 
-## Test Example Structure
-When providing test cases, please follow this structure:
-```javascript
-/**
- * @jest-environment node
- */
+### Error Handling Approach
+- Consistent error logging
+- Informative error responses
+- Use of try/catch blocks
+- Centralized error management through Winston logger
 
-const moduleName = require('../path/to/module');
-const { mockFunction } = require('../path/to/mocks');
+## Dependency Overview
+- **Database**: sqlite3
+- **Logging**: winston
+- **Web Server**: express
+- **Security**: helmet, cors
+- **Performance**: compression
 
-// Mock dependencies
-jest.mock('../path/to/dependency', () => ({
-  someFunction: jest.fn(),
-}));
+## Testing Strategy
+### Types of Testing
+1. Unit Testing
+   - Individual module functionality
+   - Mock external dependencies
+   - Aim for 80% coverage on critical modules
 
-describe('Module: ModuleName', () => {
-  beforeEach(() => {
-    // Setup for each test
-    jest.clearAllMocks();
-  });
+2. Integration Testing
+   - Module interaction validation
+   - API data fetching and storage
+   - Authentication flows
 
-  test('should perform expected behavior when given valid input', () => {
-    // Arrange
-    const testInput = 'test value';
-    const expectedOutput = 'expected result';
-    
-    // Act
-    const result = moduleName.functionName(testInput);
-    
-    // Assert
-    expect(result).toBe(expectedOutput);
-  });
+3. End-to-End Testing
+   - Complete user journey testing
+   - Dashboard data visualization
+   - Configuration change impacts
 
-  test('should handle error cases appropriately', () => {
-    // Arrange
-    const invalidInput = null;
-    
-    // Act & Assert
-    expect(() => {
-      moduleName.functionName(invalidInput);
-    }).toThrow('Expected error message');
-  });
-});
-```
+## Development Workflow
+1. Modular development
+2. Comprehensive documentation
+3. Rigorous testing
+4. Continuous integration
+5. Performance optimization
+
+## Next Development Priorities
+1. Faction Tracker Reimplementation
+2. Frontend Dashboard Development
+3. Comprehensive Test Suite
+4. Performance Optimization
+5. Advanced Visualization Features
+
+## Challenges and Considerations
+- Torn API Rate Limiting
+- Secure API Key Management
+- Real-time Data Synchronization
+- Cross-module Communication
+- Performance Under Heavy Load
+
+## Technology Decisions
+- Chosen SQLite for lightweight, file-based storage
+- Express.js for flexible, middleware-based routing
+- Custom authentication for maximum control
+- Modular service-based architecture
 
 ## File Structure
 ```
 /torn-dashboard/
 │
 ├── /server/                # Backend Node.js application
-│   ├── /api/               # API endpoints
-│   ├── /db/                # Database models and migrations
+│   ├── /api/               # API endpoint routes
+│   │   ├── auth.js         # Authentication routes
+│   │   ├── api-keys.js     # API key management routes
+│   │   ├── faction-tracker.js  # Faction tracking routes
+│   │   ├── data.js         # Data retrieval routes
+│   │   └── index.js        # Main API router
+│   │
+│   ├── /db/                # Database management
+│   │   ├── models/         # Database models
+│   │   │   ├── user.js     # User model
+│   │   │   └── api-key.js  # API key model
+│   │   ├── schema.js       # Database schema and connection
+│   │   └── connection.js   # Database connection utilities
+│   │
 │   ├── /services/          # Business logic services
 │   │   ├── /torn-api/      # Torn API client
-│   │   ├── /polling/       # Data polling service (to be implemented)
-│   │   └── /auth/          # Authentication service (to be implemented)
+│   │   ├── /auth/          # Authentication services
+│   │   ├── /faction-tracker/  # Faction tracking services
+│   │   │   ├── faction-tracker-service.js
+│   │   │   ├── war-tracker.js
+│   │   │   └── data-processor.js
+│   │   ├── /polling/       # Data polling service
+│   │   └── /data/          # Data management services
+│   │
+│   ├── /middleware/        # Express middleware
+│   │   └── auth.js         # Authentication middleware
+│   │
 │   ├── /utils/             # Utility functions
+│   │   └── logger.js       # Logging utility
+│   │
 │   ├── /config/            # Configuration files
-│   ├── /tests/             # Test cases for server components
-│   │   ├── /unit/          # Unit tests for individual modules
-│   │   ├── /integration/   # Integration tests across modules
-│   │   └── /mocks/         # Mock data and services for testing
-│   └── server.js           # Main server file
+│   │   └── api-config.js   # API configuration
+│   │
+│   ├── /scripts/           # Utility scripts
+│   │   ├── init-db.js      # Database initialization
+│   │   └── reset-db.js     # Database reset utility
+│   │
+│   ├── /tests/             # Server-side tests
+│   │   ├── /unit/          # Unit tests
+│   │   ├── /integration/   # Integration tests
+│   │   └── /mocks/         # Test mocks and fixtures
+│   │
+│   └── server.js           # Main server entry point
 │
-├── /client/                # Vue frontend application (to be implemented)
+├── /client/                # Frontend Vue.js application
 │   ├── /src/
-│   │   ├── /components/    # Vue components
-│   │   ├── /views/         # Page views
+│   │   ├── /components/    # Reusable Vue components
+│   │   ├── /views/         # Page components
 │   │   ├── /store/         # Vuex state management
-│   │   ├── /services/      # Frontend services
+│   │   ├── /services/      # Frontend service layer
+│   │   ├── /utils/         # Frontend utilities
 │   │   └── /assets/        # Static assets
-│   ├── /tests/             # Test cases for frontend components
-│   │   ├── /unit/          # Unit tests for Vue components
-│   │   └── /e2e/           # End-to-end tests for user flows
-│   └── /public/            # Public static files
+│   │
+│   ├── /tests/             # Frontend tests
+│   │   ├── /unit/          # Component unit tests
+│   │   └── /e2e/           # End-to-end tests
+│   │
+│   ├── vue.config.js       # Vue CLI configuration
+│   └── package.json        # Frontend dependencies
+│
+├── /docs/                  # Project documentation
+├── /data/                  # Local data storage (SQLite DB)
+├── .env                    # Environment configuration
+├── package.json            # Project-wide dependencies
+└── README.md               # Project overview and setup instructions
 ```
 
-## Testing Strategy
-
-### Unit Testing
-
-- Each module requires comprehensive unit tests using Jest
-- Mock external dependencies to isolate functionality
-- Coverage target: 80% minimum for critical modules
-- Examples of tests to create:
-  - API client rate limiting functionality (completed)
-  - Data model validation
-  - Authentication logic
-  - Configuration loading
-
-### Integration Testing
-
-- Test interactions between connected modules
-- Focus on key workflows:
-  - API data fetching and storage
-  - User authentication flow
-  - Data polling and processing
-
-### End-to-End Testing
-
-- Test complete user flows through the application
-- Validate dashboard visualization of data
-- Test configuration changes and their effects
-- Simulate API failures and rate limiting
-
-## Test Command Examples
-```bash
-# Run unit tests
-npm run test:unit
-
-# Run integration tests
-npm run test:integration 
-
-# Run all tests with coverage report
-npm run test:all
-
-# Run specific test file
-npm run test -- --testPathPattern=torn-api-client.test.js
-```
-
-## Next Steps
-
-1. Initialize the faction tracking database tables
-2. Test the faction tracker system with real API data
-3. Set up the Vue.js frontend environment
-4. Create the dashboard layout
-5. Implement the faction tracking visualization components
-
-## Conversation Instructions
-
-- Review this document to understand the project status
-- Ask me for any specific files you need to help with the current focus
-- Please provide complete implementations following the documented structure
-- Update this document with any progress made at the end of our conversation
+## Future Expansion Potential
+- Multi-game Dashboard Concept
+- Advanced Analytics
+- Machine Learning Integration
+- Community Features
 
 Last Updated: March 10, 2025  
-Current Priority: Testing the faction tracker system and developing the frontend interface
+Current Focus: Faction Tracker System Testing and Frontend Development

@@ -6,8 +6,15 @@ let testConfig;
 try {
   testConfig = require('../../../../config/test-config');
 } catch (error) {
-  console.error('Test configuration file missing. Copy config/test-config.example.js to config/test-config.js and add your credentials.');
-  process.exit(1);
+  console.warn('Test configuration file missing. Using mock API key for unit tests.');
+  testConfig = {
+    apiKeys: {
+      test: 'mock-api-key-for-unit-tests'
+    },
+    testUser: {
+      torn_id: 12345
+    }
+  };
 }
 
 const axios = require('axios');

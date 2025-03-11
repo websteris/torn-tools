@@ -9,6 +9,8 @@ on:
 jobs:
   test:
     runs-on: ubuntu-latest
+    env:
+      HAS_API_KEY: ${{ secrets.TORN_API_KEY != '' }}
 
     steps:
     - uses: actions/checkout@v3
@@ -27,16 +29,16 @@ jobs:
       run: mkdir -p server/config
         
     - name: Set up test configuration with API key
-      if: ${{ secrets.TORN_API_KEY != '' }}
+      if: env.HAS_API_KEY == 'true'
       run: |
         echo "module.exports = { apiKeys: { test: '${{ secrets.TORN_API_KEY }}' }, testUser: { torn_id: 1 } };" > server/config/test-config.js
       
-    - name: Run all tests (with API tests)
-      if: ${{ secrets.TORN_API_KEY != '' }}
+    - name: Set up mock test configuration
+      if: env.HAS_API_KEY != 'true'
+      run: |
+        echo "module.exports = { apiKeys: { test: 'mock-api-key-for-unit-tests' }, testUser: { torn_id: 12345 } };" > server/config/test-config.js
+      
+    - name: Run all tests
       env:
         TORN_API_KEY: ${{ secrets.TORN_API_KEY }}
-      run: npm test
-      
-    - name: Run non-API tests only
-      if: ${{ secrets.TORN_API_KEY == '' }}
-      run: cd server && npm run test:noapi 
+      run: npm test 

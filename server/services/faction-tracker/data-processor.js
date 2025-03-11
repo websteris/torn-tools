@@ -297,13 +297,13 @@ async function getLatestFactionData(factionId) {
         
         if (err) {
           logger.error(`Error getting latest faction data: ${err.message}`);
-          reject(err);
+          resolve(null);
           return;
         }
         
         resolve(row || null);
       });
-    });
+    }).catch(() => null);
   } catch (error) {
     logger.error(`Error in getLatestFactionData: ${error.message}`);
     return null;
@@ -321,27 +321,21 @@ async function getLatestMembersData(factionId) {
     
     return new Promise((resolve, reject) => {
       db.all(`
-        SELECT fm.* 
-        FROM faction_members fm
-        INNER JOIN (
-          SELECT member_id, MAX(timestamp) as max_timestamp
-          FROM faction_members
-          WHERE faction_id = ?
-          GROUP BY member_id
-        ) latest ON fm.member_id = latest.member_id AND fm.timestamp = latest.max_timestamp
-        WHERE fm.faction_id = ?
-      `, [factionId, factionId], (err, rows) => {
+        SELECT * FROM faction_members 
+        WHERE faction_id = ?
+        ORDER BY timestamp DESC
+      `, [factionId], (err, rows) => {
         db.close();
         
         if (err) {
           logger.error(`Error getting latest members data: ${err.message}`);
-          reject(err);
+          resolve([]);
           return;
         }
         
         resolve(rows || []);
       });
-    });
+    }).catch(() => []);
   } catch (error) {
     logger.error(`Error in getLatestMembersData: ${error.message}`);
     return [];

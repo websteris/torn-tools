@@ -2,10 +2,7 @@
  * @jest-environment node
  */
 
-const dataProcessor = require('../../../../services/faction-tracker/data-processor');
-const { getConnection } = require('../../../../db/schema');
-
-// Mock dependencies
+// Mock dependencies first
 jest.mock('../../../../db/schema', () => ({
   getConnection: jest.fn()
 }));
@@ -18,6 +15,11 @@ jest.mock('../../../../utils/logger', () => ({
     warn: jest.fn()
   }
 }));
+
+// Import modules after mocking
+const dataProcessor = require('../../../../services/faction-tracker/data-processor');
+const { getConnection } = require('../../../../db/schema');
+const { logger } = require('../../../../utils/logger');
 
 describe('Module: DataProcessor', () => {
   let mockDb;
@@ -259,17 +261,20 @@ describe('Module: DataProcessor', () => {
       // Arrange
       const factionId = 1000;
       
-      // Mock the get method to throw an error
+      // Mock the database error
       mockDb.get.mockImplementation((query, params, callback) => {
-        // Just pass the error object directly, don't throw it
-        callback({ message: 'Database error' }, null);
+        callback(new Error('Database error'), null);
       });
       
-      // Act
+      // Ensure logger.error mock is called and doesn't throw
+      logger.error.mockImplementation(() => {});
+      
+      // Act 
       const result = await dataProcessor.getLatestFactionData(factionId);
       
       // Assert
       expect(result).toBeNull();
+      expect(logger.error).toHaveBeenCalled();
       expect(mockDb.close).toHaveBeenCalled();
     });
   });
@@ -308,8 +313,8 @@ describe('Module: DataProcessor', () => {
       // Assert
       expect(result).toEqual(mockMembersData);
       expect(mockDb.all).toHaveBeenCalledWith(
-        expect.stringContaining('SELECT fm.*'),
-        [factionId, factionId],
+        expect.stringContaining('SELECT * FROM faction_members'),
+        [factionId],
         expect.any(Function)
       );
       expect(mockDb.close).toHaveBeenCalled();
@@ -336,17 +341,20 @@ describe('Module: DataProcessor', () => {
       // Arrange
       const factionId = 1000;
       
-      // Mock the all method to throw an error
+      // Mock the database error
       mockDb.all.mockImplementation((query, params, callback) => {
-        // Just pass the error object directly, don't throw it
-        callback({ message: 'Database error' }, null);
+        callback(new Error('Database error'), null);
       });
+      
+      // Ensure logger.error mock is called and doesn't throw
+      logger.error.mockImplementation(() => {});
       
       // Act
       const result = await dataProcessor.getLatestMembersData(factionId);
       
       // Assert
       expect(result).toEqual([]);
+      expect(logger.error).toHaveBeenCalled();
       expect(mockDb.close).toHaveBeenCalled();
     });
   });

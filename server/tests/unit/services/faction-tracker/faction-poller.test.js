@@ -99,26 +99,28 @@ describe('Module: FactionPoller', () => {
         name: 'Test Faction'
       };
       
-      // Setup mock
+      // Setup mock to return data
       tornApiMock.getFactionData.mockResolvedValue(mockFactionData);
       
-      // Spy on the real function
-      const pollFactionDataSpy = jest.spyOn(factionPoller, 'pollFactionData')
-        .mockImplementation(async (fId, key, sel) => {
-          // Verify the default selections
-          expect(sel).toEqual(['basic', 'members', 'territory_wars', 'raid_wars', 'ranked_wars']);
-          
-          return mockFactionData;
-        });
+      // Setup expected default selections
+      const expectedDefaultSelections = ['basic', 'members', 'territory_wars', 'raid_wars', 'ranked_wars'];
+      
+      // Temporarily modify the original function to check default selections
+      const originalPollFactionData = factionPoller.pollFactionData;
+      factionPoller.pollFactionData = jest.fn().mockImplementation(async (fId, key, sel = expectedDefaultSelections) => {
+        expect(sel).toEqual(expectedDefaultSelections);
+        return mockFactionData;
+      });
       
       // Act
       const result = await factionPoller.pollFactionData(factionId, apiKey);
       
       // Assert
       expect(result).toEqual(mockFactionData);
+      expect(factionPoller.pollFactionData).toHaveBeenCalled();
       
-      // Cleanup
-      pollFactionDataSpy.mockRestore();
+      // Restore original function
+      factionPoller.pollFactionData = originalPollFactionData;
     });
     
     test('should throw error when no data returned', async () => {

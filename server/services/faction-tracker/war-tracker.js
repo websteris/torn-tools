@@ -202,12 +202,12 @@ async function getActiveWars(factionId) {
         db.close();
         if (err) {
           logger.error(`Error getting active wars: ${err.message}`);
-          reject(err);
+          resolve([]);
           return;
         }
         resolve(rows || []);
       });
-    });
+    }).catch(() => []);
   } catch (error) {
     logger.error(`Error in getActiveWars: ${error.message}`);
     return [];
@@ -300,6 +300,11 @@ async function getWarDetails(warId, warType) {
   }
 }
 
+/**
+ * Get factions currently at war with a faction
+ * @param {number} factionId - Faction ID
+ * @returns {Promise<Array<Object>>} War opponents
+ */
 async function getWarOpponents(factionId) {
   try {
     logger.debug(`Getting war opponents for faction ${factionId}`);
@@ -332,17 +337,30 @@ async function getWarOpponents(factionId) {
       } else if (warType === 'ranked') {
         const warDetails = await getWarDetails(war.war_id, warType);
         if (warDetails && warDetails.factions) {
-          const factions = Array.isArray(warDetails.factions)
-            ? warDetails.factions
-            : Object.values(warDetails.factions); // Handle object or array
-          for (const factionData of factions) {
-            const factionIdNum = parseInt(factionData.faction_id || factionData.id); // Flexible key
-            if (factionIdNum === parseInt(factionId)) {
-              userScore = factionData.score;
-            } else {
-              opponentId = factionIdNum;
-              opponentName = factionData.name;
-              opponentScore = factionData.score;
+          const factionsData = warDetails.factions;
+          // Handle both array and object formats
+          if (Array.isArray(factionsData)) {
+            for (const factionData of factionsData) {
+              const factionIdNum = parseInt(factionData.faction_id);
+              if (factionIdNum === parseInt(factionId)) {
+                userScore = factionData.score;
+              } else {
+                opponentId = factionIdNum;
+                opponentName = factionData.name;
+                opponentScore = factionData.score;
+              }
+            }
+          } else {
+            // Handle object format where keys are faction IDs
+            for (const [key, factionData] of Object.entries(factionsData)) {
+              const factionIdNum = parseInt(key);
+              if (factionIdNum === parseInt(factionId)) {
+                userScore = factionData.score;
+              } else {
+                opponentId = factionIdNum;
+                opponentName = factionData.name;
+                opponentScore = factionData.score;
+              }
             }
           }
         }
@@ -352,14 +370,10 @@ async function getWarOpponents(factionId) {
         opponents.push({
           war_id: war.war_id,
           opponent_id: opponentId,
-          opponent_name: opponentName || null,
+          opponent_name: opponentName,
           war_type: warType,
-          start_time: war.start_time || 0,
-          end_time: war.end_time || 0,
-          user_score: userScore || 0,
-          opponent_score: opponentScore || null,
-          target: war.target || null,
-          winner: war.winner || null
+          user_score: userScore,
+          opponent_score: opponentScore
         });
       }
     }
@@ -367,7 +381,7 @@ async function getWarOpponents(factionId) {
     logger.debug(`Found ${opponents.length} war opponents for faction ${factionId}`);
     return opponents;
   } catch (error) {
-    logger.error(`Error getting war opponents for faction ${factionId}: ${error.message}`);
+    logger.error(`Error in getWarOpponents: ${error.message}`);
     return [];
   }
 }

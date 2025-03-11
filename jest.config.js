@@ -3,7 +3,6 @@
  */
 module.exports = {
   testEnvironment: 'node',
-  verbose: true,
   collectCoverage: false,
   coverageDirectory: 'coverage',
   coverageReporters: ['text', 'lcov'],

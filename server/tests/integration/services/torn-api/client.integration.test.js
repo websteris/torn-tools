@@ -15,18 +15,22 @@ try {
 
 const TornApiClient = require('../../../../services/torn-api/client');
 
-// This test requires a real API key and makes real API calls
-// Only run when specifically testing integration
-describe('TornApiClient Integration Tests', () => {
+// Get API key from environment variable or use a fallback for local development
+const API_KEY = process.env.TORN_API_KEY || 'your-local-test-key';
+
+// Skip all tests if no valid API key is available
+const runApiTests = API_KEY && API_KEY !== 'your-local-test-key';
+
+describe('Torn API Client Integration', () => {
   let apiClient;
   
   beforeEach(() => {
     apiClient = new TornApiClient();
   });
   
-  test('should fetch user data with valid API key', async () => {
+  (runApiTests ? test : test.skip)('should fetch user data with valid API key', async () => {
     // This test uses your real API key
-    const userData = await apiClient.getUserData(testConfig.apiKeys.test, ['profile']);
+    const userData = await apiClient.getUserData(API_KEY, ['profile']);
     
     // Ensure we get a successful response with player ID matching test config
     expect(userData).toBeDefined();
@@ -37,7 +41,7 @@ describe('TornApiClient Integration Tests', () => {
     expect(userData.level).toBeDefined();
   }, 10000); // Extend timeout for API call
   
-  test('should handle invalid API key', async () => {
+  (runApiTests ? test : test.skip)('should handle invalid API key', async () => {
     // Test with an invalid key
     try {
       await apiClient.getUserData('invalid_key_test', ['profile']);

@@ -29,7 +29,7 @@ jobs:
     - name: Set up test configuration with API key
       if: ${{ secrets.TORN_API_KEY != '' }}
       run: |
-        echo "module.exports = { apiKey: '${{ secrets.TORN_API_KEY }}', testUser: { torn_id: 1 } };" > server/config/test-config.js
+        echo "module.exports = { apiKeys: { test: '${{ secrets.TORN_API_KEY }}' }, testUser: { torn_id: 1 } };" > server/config/test-config.js
       
     - name: Run all tests (with API tests)
       if: ${{ secrets.TORN_API_KEY != '' }}

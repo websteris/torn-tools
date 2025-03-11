@@ -5,17 +5,12 @@
  */
 
 module.exports = {
-  apiKeys: {
-    // Test API key for Torn API
-    test: 'YOUR_TEST_API_KEY_HERE',
-    // Alternative test key (for rate limiting tests)
-    alternate: 'ALTERNATE_TEST_API_KEY'
-  },
+  // Your Torn API key
+  apiKey: 'your-api-key-here',
+  
+  // Test user information
   testUser: {
-    id: 12345,  // Your test user ID
-    name: 'TestUser',
-    torn_id: 67890,
-    faction_id: 10000,
-    faction_name: 'Test Faction'
+    torn_id: 12345, // Your Torn ID
+    name: 'YourName' // Your Torn name
   }
 };

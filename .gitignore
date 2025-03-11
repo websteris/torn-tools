@@ -3,6 +3,7 @@ node_modules/
 .env
 config/apikeys.js
 *.db
+# Test configuration
 server/config/test-config.js
 # Test coverage
 coverage/

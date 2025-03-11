@@ -10,8 +10,8 @@ const apiKeysRoutes = require('./api-keys');
 const authRoutes = require('./auth');
 const testRoutes = require('./test');
 const dataRoutes = require('./data');
-// Comment out routes that might be causing issues
-// const factionTrackerRoutes = require('./faction-tracker');
+// Uncomment the faction tracker routes
+const factionTrackerRoutes = require('./faction-tracker');
 
 // API metadata endpoint
 router.get('/', (req, res) => {
@@ -28,15 +28,16 @@ router.get('/', (req, res) => {
       '/api/data/user',
       '/api/data/faction/:factionId',
       '/api/data/torn',
-      // Comment out endpoints that might be causing issues
-      // '/api/faction-tracker/factions',
-      // '/api/faction-tracker/track',
-      // '/api/faction-tracker/stop',
-      // '/api/faction-tracker/faction/:factionId',
-      // '/api/faction-tracker/faction/:factionId/members',
-      // '/api/faction-tracker/faction/:factionId/wars/active',
-      // '/api/faction-tracker/faction/:factionId/wars/history',
-      // '/api/faction-tracker/war/:warId/:warType',
+      // Re-enable faction tracker endpoints
+      '/api/faction-tracker/factions',
+      '/api/faction-tracker/track',
+      '/api/faction-tracker/stop',
+      '/api/faction-tracker/faction/:factionId',
+      '/api/faction-tracker/faction/:factionId/members',
+      '/api/faction-tracker/faction/:factionId/wars/active',
+      '/api/faction-tracker/faction/:factionId/wars/history',
+      '/api/faction-tracker/war/:warId/:warType',
+      '/api/faction-tracker/faction/:factionId/opponents',
       // Add other endpoints as they are implemented
     ]
   });
@@ -47,8 +48,8 @@ router.use('/auth', authRoutes);
 router.use('/keys', apiKeysRoutes);
 router.use('/test', testRoutes);
 router.use('/data', dataRoutes);
-// Comment out routes that might be causing issues
-// router.use('/faction-tracker', factionTrackerRoutes);
+// Re-enable faction tracker routes
+router.use('/faction-tracker', factionTrackerRoutes);
 
 // 404 handler for API routes
 router.use((req, res) => {

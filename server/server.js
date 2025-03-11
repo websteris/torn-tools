@@ -10,9 +10,9 @@ const compression = require('compression');
 const cookieParser = require('cookie-parser');
 const { logger } = require('./utils/logger');
 
-// Comment out services that might be causing issues
-// const pollingService = require('./services/polling/polling-service');
-// const factionTrackerService = require('./services/faction-tracker/faction-tracker-service');
+// Uncomment services
+const pollingService = require('./services/polling/polling-service');
+const factionTrackerService = require('./services/faction-tracker/faction-tracker-service');
 
 // Initialize Express app
 const app = express();
@@ -60,15 +60,15 @@ if (process.env.NODE_ENV !== 'test') {
     logger.info(`Server running on port ${PORT}`);
     logger.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
     
-    // Comment out services that might be causing issues
-    // try {
-    //   console.log('Starting polling service...');
-    //   pollingService.start();
-    //   console.log('Starting faction tracker service...');
-    //   factionTrackerService.start();
-    // } catch (error) {
-    //   console.error('Error starting services:', error);
-    // }
+    // Uncomment services
+    try {
+      console.log('Starting polling service...');
+      pollingService.start();
+      console.log('Starting faction tracker service...');
+      factionTrackerService.start();
+    } catch (error) {
+      console.error('Error starting services:', error);
+    }
   });
 }
 

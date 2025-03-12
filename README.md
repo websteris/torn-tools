@@ -1,4 +1,4 @@
-# Torn Dashboard Project Status
+# Torn Dashboard Project
 
 ## Project Overview
 Torn Dashboard is a comprehensive web application designed to provide advanced tracking and data visualization for the online game Torn. The project aims to consolidate various existing scripts and tools into a cohesive, modular interface that helps players manage and analyze their game data.
@@ -9,13 +9,14 @@ Torn Dashboard is a comprehensive web application designed to provide advanced t
 - **Database**: SQLite3
 - **Authentication**: Custom JWT-based system
 - **Logging**: Winston logger
+- **API Integration**: Torn API + Custom API
 
 ## Core Development Principles
-1. Modularity First: All components must be self-contained with clear interfaces
-2. Comprehensive Documentation
-3. Complete and Robust Code
-4. Clear Component Interfaces
-5. Test-Driven Development
+1. **Modularity First**: All components must be self-contained with clear interfaces
+2. **Documentation Required**: Thorough documentation for all modules
+3. **Complete Code**: Always provide complete files, not snippets
+4. **Clear Component Interfaces**: Components should communicate through well-defined APIs
+5. **Test-Driven Development**: Each module requires test cases to validate functionality
 
 ## Architecture
 ### Backend
@@ -33,6 +34,11 @@ Torn Dashboard is a comprehensive web application designed to provide advanced t
 
 ## Current Project Status
 
+### Current Focus
+- Testing the faction tracker and war tracking functionality
+- Setting up the frontend components
+- Implementing user interface for faction tracking
+
 ### Completed Components
 - Base Express server setup
 - Database schema and initialization scripts
@@ -42,21 +48,29 @@ Torn Dashboard is a comprehensive web application designed to provide advanced t
 - User model with comprehensive CRUD operations
 - Database connection and initialization logic
 - API routes for various services
+- Torn API client (with rate limiting, caching, and error handling)
+- Data polling service
+- Faction tracker service (with member tracking and war monitoring)
 
 ### Working Components
 - User authentication
 - API key storage and management
 - Basic data retrieval
 - Database schema initialization
+- Data access API endpoints
+
+### In-Progress Components
+- Frontend dashboard layout
 
 ### Temporarily Disabled Components
-- Faction tracker service (currently commented out in server configuration)
+- Faction tracker service (currently being tested)
 
 ### Recent Fixes
 - Implemented class-based user model with robust methods
 - Corrected database connection imports
 - Enhanced error handling in database operations
 - Improved database schema with more comprehensive table structures
+- Implemented secure encryption for API keys
 
 ### Pending Tasks
 - Re-enable and thoroughly test faction tracker service
@@ -64,6 +78,7 @@ Torn Dashboard is a comprehensive web application designed to provide advanced t
 - Develop comprehensive test coverage
 - Implement rate limiting for API requests
 - Build frontend dashboard components
+- Create the faction tracking visualization components
 
 ## Database Schema
 The SQLite database includes tables for:
@@ -242,12 +257,71 @@ module.exports = new ModelName();
 - Machine Learning Integration
 - Community Features
 
-Last Updated: March 10, 2025  
-Current Focus: Faction Tracker System Testing and Frontend Development
+## Component Details
+
+### Torn API Client
+- **Status**: Completed
+- **Purpose**: Handles communication with Torn's API, including authentication, rate limiting, and caching
+- **Current Challenges**: None - Implementation complete with proper rate limiting and error handling
+- **Files**:
+  - `server/services/torn-api/client.js`
+  - `server/config/api-config.js`
+  - `server/services/torn-api/example-service.js`
+  - `server/tests/unit/services/torn-api/client.test.js`
+
+### Database System
+- **Status**: Implemented
+- **Purpose**: Stores user data, API keys, and game information
+- **Current Challenges**: Testing database concurrency and performance
+- **Files**:
+  - `server/db/schema.js`
+  - `server/db/models/user.js`
+  - `server/db/models/api-key.js`
+
+### API Routes
+- **Status**: Implemented
+- **Purpose**: Provides endpoints for managing API keys and user data
+- **Current Challenges**: Need to test with real Torn API data
+- **Files**:
+  - `server/api/index.js`
+  - `server/api/api-keys.js`
+  - `server/api/auth.js`
+  - `server/api/data.js`
+  - `server/api/test.js`
+
+### Authentication System
+- **Status**: Implemented, needs testing
+- **Purpose**: Manages user registration and authentication using Torn API keys
+- **Current Challenges**: Need to test the full authentication flow
+- **Files**:
+  - `server/services/auth/auth-service.js`
+  - `server/api/auth.js`
+  - `server/middleware/auth.js`
+
+### Data Polling Service
+- **Status**: Implemented
+- **Purpose**: Regularly fetches and caches data from the Torn API
+- **Current Challenges**: Need to tune polling intervals based on usage
+- **Files**:
+  - `server/services/polling/polling-service.js`
+  - `server/services/data/data-service.js`
+
+### Faction Tracker System
+- **Status**: Implemented, needs testing
+- **Purpose**: Tracks faction data, members, and war activities
+- **Current Challenges**: Testing with real Torn API data and optimizing polling frequency
+- **Files**:
+  - `server/services/faction-tracker/faction-tracker-service.js`
+  - `server/services/faction-tracker/faction-poller.js`
+  - `server/services/faction-tracker/api-key-manager.js`
+  - `server/services/faction-tracker/data-processor.js`
+  - `server/services/faction-tracker/war-tracker.js`
+  - `server/api/faction-tracker.js`
+  - `server/scripts/init-faction-db.js`
 
 ## Database and API Integration
 
-This project now includes a centralized data access layer using Knex for database operations. The following modules have been added:
+This project includes a centralized data access layer using Knex for database operations. The following modules have been added:
 
 - **server/db/index.js**: Manages the database connection using Knex with a PostgreSQL client.
 - **server/models/faction.js**: Handles CRUD operations for faction data.
@@ -258,6 +332,35 @@ This project now includes a centralized data access layer using Knex for databas
 - **server/services/torn-api/validateKey.js**: Validates Torn API keys to ensure only keys with "Public Only" access type are accepted.
 
 These modules help maintain a clean, modular architecture for our project and facilitate future enhancements, such as adding a Vue front end and switching databases if needed.
+
+## Testing Strategy
+
+### Types of Testing
+1. Unit Testing
+   - Individual module functionality
+   - Mock external dependencies
+   - Aim for 80% coverage on critical modules
+   - Examples of tests to create:
+     - API client rate limiting functionality (completed)
+     - Data model validation
+     - Authentication logic
+     - Configuration loading
+
+2. Integration Testing
+   - Module interaction validation
+   - API data fetching and storage
+   - Authentication flows
+   - Focus on key workflows:
+     - API data fetching and storage
+     - User authentication flow
+     - Data polling and processing
+
+3. End-to-End Testing
+   - Complete user journey testing
+   - Dashboard data visualization
+   - Configuration change impacts
+   - Test configuration changes and their effects
+   - Simulate API failures and rate limiting
 
 ## Testing with Torn API Keys
 
@@ -296,9 +399,21 @@ For more thorough testing, you can configure real API keys:
 - Run all tests: `npm test`
 - Run only unit tests: `npm test -- --testPathPattern=unit`
 - Run only integration tests: `npm test -- --testPathPattern=integration`
+- Run all tests with coverage report: `npm run test:all`
+- Run specific test file: `npm run test -- --testPathPattern=torn-api-client.test.js`
 
 ### API Usage Considerations
 - Tests are designed to minimize API calls
 - Integration tests that make real API calls have longer timeouts (10 seconds)
 - Tests will skip in CI environments unless explicitly enabled with `RUN_API_TESTS=true`
 - The Torn API has a limit of 100 requests per minute per key
+
+## Next Development Priorities
+1. Faction Tracker Reimplementation
+2. Frontend Dashboard Development
+3. Comprehensive Test Suite
+4. Performance Optimization
+5. Advanced Visualization Features
+
+Last Updated: March 12, 2025  
+Current Focus: Faction Tracker System Testing and Frontend Development

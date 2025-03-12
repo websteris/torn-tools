@@ -13,7 +13,7 @@ const env = process.env.NODE_ENV || 'development';
 // Load configuration
 let config;
 try {
-  config = require('../knexfile')[env];
+  config = require('../../knexfile')[env];
 } catch (error) {
   logger.warn(`Could not load knexfile for environment ${env}: ${error.message}`);
   
@@ -26,10 +26,10 @@ try {
       },
       useNullAsDefault: true,
       migrations: {
-        directory: path.join(__dirname, 'migrations')
+        directory: path.join(__dirname, '../../migrations')
       },
       seeds: {
-        directory: path.join(__dirname, 'seeds')
+        directory: path.join(__dirname, '../../seeds')
       }
     },
     test: {
@@ -39,20 +39,20 @@ try {
       },
       useNullAsDefault: true,
       migrations: {
-        directory: path.join(__dirname, 'migrations')
+        directory: path.join(__dirname, '../../migrations')
       },
       seeds: {
-        directory: path.join(__dirname, 'seeds')
+        directory: path.join(__dirname, '../../seeds')
       }
     },
     production: {
       client: 'pg',
       connection: process.env.DATABASE_URL,
       migrations: {
-        directory: path.join(__dirname, 'migrations')
+        directory: path.join(__dirname, '../../migrations')
       },
       seeds: {
-        directory: path.join(__dirname, 'seeds')
+        directory: path.join(__dirname, '../../seeds')
       }
     }
   };

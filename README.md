@@ -1,419 +1,492 @@
-# Torn Dashboard Project
+# Torn Dashboard Server
 
-## Project Overview
-Torn Dashboard is a comprehensive web application designed to provide advanced tracking and data visualization for the online game Torn. The project aims to consolidate various existing scripts and tools into a cohesive, modular interface that helps players manage and analyze their game data.
+## Overview
+The Torn Dashboard Server is a backend application designed to interact with the Torn API, manage user and faction data, and provide authentication services. It supports periodic data pulling from the Torn API, storing and updating data in a database, and handling user authentication and preferences.
 
-## Technology Stack
-- **Frontend**: Vue.js
-- **Backend**: Node.js with Express.js
-- **Database**: SQLite3
-- **Authentication**: Custom JWT-based system
-- **Logging**: Winston logger
-- **API Integration**: Torn API + Custom API
+## Features
+- **User Management**: CRUD operations for user data.
+- **Authentication**: User registration, login, and JWT token management.
+- **Faction Management**: CRUD operations for faction data.
+- **Faction War Tracking**: Manage and track faction wars.
+- **Data Pulling**: Periodically fetches data from the Torn API and updates the database.
+- **Background Services**: Polling-service and faction-tracker-service for automatic data collection.
+- **Security**: Implements Helmet for HTTP header security, CORS protection, and response compression.
+## Technologies Used
+- **Express**: Web server framework.
+- **Knex**: SQL query builder for database operations.
+- **SQLite3**: Database for development and testing.
+- **PostgreSQL**: Database for production.
+- **Axios**: HTTP client for API requests.
+- **Bcrypt**: Password hashing.
+- **Jsonwebtoken**: JWT token management.
+- **Node-cache**: Caching.
+- **Node-fetch**: HTTP requests.
 
-## Core Development Principles
-1. **Modularity First**: All components must be self-contained with clear interfaces
-2. **Documentation Required**: Thorough documentation for all modules
-3. **Complete Code**: Always provide complete files, not snippets
-4. **Clear Component Interfaces**: Components should communicate through well-defined APIs
-5. **Test-Driven Development**: Each module requires test cases to validate functionality
+## Services
+The application includes several background services:
 
-## Architecture
-### Backend
-- **Framework**: Express.js
-- **Database Connection**: SQLite with custom connection management
-- **Authentication**: Custom middleware-based JWT authentication
-- **Logging**: Centralized logging using Winston
+- **Polling Service**: Automatically fetches updates from the Torn API on a scheduled basis, ensuring data is fresh without requiring manual updates.
+- **Faction Tracker Service**: Monitors faction activities and wars, keeping the database updated with the latest faction information.
 
-### Key Components
-1. User Management
-2. API Key Management
-3. Faction Tracker
-4. Data Retrieval Services
-5. War Tracking
+These services run in the background when the server is started and do not require additional configuration.
 
-## Current Project Status
+## Setup Instructions
 
-### Current Focus
-- Testing the faction tracker and war tracking functionality
-- Setting up the frontend components
-- Implementing user interface for faction tracking
+### Prerequisites
+- Node.js and npm installed
+- PostgreSQL for production environment
 
-### Completed Components
-- Base Express server setup
-- Database schema and initialization scripts
-- User authentication system
-- API key management
-- Basic data retrieval endpoints
-- User model with comprehensive CRUD operations
-- Database connection and initialization logic
-- API routes for various services
-- Torn API client (with rate limiting, caching, and error handling)
-- Data polling service
-- Faction tracker service (with member tracking and war monitoring)
-
-### Working Components
-- User authentication
-- API key storage and management
-- Basic data retrieval
-- Database schema initialization
-- Data access API endpoints
-
-### In-Progress Components
-- Frontend dashboard layout
-
-### Temporarily Disabled Components
-- Faction tracker service (currently being tested)
-
-### Recent Fixes
-- Implemented class-based user model with robust methods
-- Corrected database connection imports
-- Enhanced error handling in database operations
-- Improved database schema with more comprehensive table structures
-- Implemented secure encryption for API keys
-
-### Pending Tasks
-- Re-enable and thoroughly test faction tracker service
-- Complete implementation of war tracking functionality
-- Develop comprehensive test coverage
-- Implement rate limiting for API requests
-- Build frontend dashboard components
-- Create the faction tracking visualization components
-
-## Database Schema
-The SQLite database includes tables for:
-- Users
-- API Keys
-- Tracked Factions
-- Cached Data
-- User Settings
-- Notification Configurations
-
-### Key Tables Structure
-1. **Users Table**
-   - Unique identifiers
-   - Authentication details
-   - Torn game-specific information
-   - Timestamps for tracking
-
-2. **API Keys Table**
-   - User association
-   - Encrypted API key storage
-   - Labeling and management features
-
-3. **Tracked Factions Table**
-   - User-specific faction tracking
-   - Polling interval configurations
-   - Target faction details
-
-## Implementation Patterns
-
-### Database Model Pattern
-```javascript
-class ModelName {
-  async methodName() {
-    return new Promise((resolve, reject) => {
-      const db = getConnection();
-      // Database operation implementation
-      // Ensure db.close() is called
-    });
-  }
-}
-module.exports = new ModelName();
-```
-
-### Error Handling Approach
-- Consistent error logging
-- Informative error responses
-- Use of try/catch blocks
-- Centralized error management through Winston logger
-
-## Dependency Overview
-- **Database**: sqlite3
-- **Logging**: winston
-- **Web Server**: express
-- **Security**: helmet, cors
-- **Performance**: compression
-
-## Testing Strategy
-### Types of Testing
-1. Unit Testing
-   - Individual module functionality
-   - Mock external dependencies
-   - Aim for 80% coverage on critical modules
-
-2. Integration Testing
-   - Module interaction validation
-   - API data fetching and storage
-   - Authentication flows
-
-3. End-to-End Testing
-   - Complete user journey testing
-   - Dashboard data visualization
-   - Configuration change impacts
-
-## Development Workflow
-1. Modular development
-2. Comprehensive documentation
-3. Rigorous testing
-4. Continuous integration
-5. Performance optimization
-
-## Next Development Priorities
-1. Faction Tracker Reimplementation
-2. Frontend Dashboard Development
-3. Comprehensive Test Suite
-4. Performance Optimization
-5. Advanced Visualization Features
-
-## Challenges and Considerations
-- Torn API Rate Limiting
-- Secure API Key Management
-- Real-time Data Synchronization
-- Cross-module Communication
-- Performance Under Heavy Load
-
-## Technology Decisions
-- Chosen SQLite for lightweight, file-based storage
-- Express.js for flexible, middleware-based routing
-- Custom authentication for maximum control
-- Modular service-based architecture
-
-## File Structure
-```
-/torn-dashboard/
-│
-├── /server/                # Backend Node.js application
-│   ├── /api/               # API endpoint routes
-│   │   ├── auth.js         # Authentication routes
-│   │   ├── api-keys.js     # API key management routes
-│   │   ├── faction-tracker.js  # Faction tracking routes
-│   │   ├── data.js         # Data retrieval routes
-│   │   └── index.js        # Main API router
-│   │
-│   ├── /db/                # Database management
-│   │   ├── models/         # Database models
-│   │   │   ├── user.js     # User model
-│   │   │   └── api-key.js  # API key model
-│   │   ├── schema.js       # Database schema and connection
-│   │   └── connection.js   # Database connection utilities
-│   │
-│   ├── /services/          # Business logic services
-│   │   ├── /torn-api/      # Torn API client
-│   │   ├── /auth/          # Authentication services
-│   │   ├── /faction-tracker/  # Faction tracking services
-│   │   │   ├── faction-tracker-service.js
-│   │   │   ├── war-tracker.js
-│   │   │   └── data-processor.js
-│   │   ├── /polling/       # Data polling service
-│   │   └── /data/          # Data management services
-│   │
-│   ├── /middleware/        # Express middleware
-│   │   └── auth.js         # Authentication middleware
-│   │
-│   ├── /utils/             # Utility functions
-│   │   └── logger.js       # Logging utility
-│   │
-│   ├── /config/            # Configuration files
-│   │   └── api-config.js   # API configuration
-│   │
-│   ├── /scripts/           # Utility scripts
-│   │   ├── init-db.js      # Database initialization
-│   │   └── reset-db.js     # Database reset utility
-│   │
-│   ├── /tests/             # Server-side tests
-│   │   ├── /unit/          # Unit tests
-│   │   ├── /integration/   # Integration tests
-│   │   └── /mocks/         # Test mocks and fixtures
-│   │
-│   └── server.js           # Main server entry point
-│
-├── /client/                # Frontend Vue.js application
-│   ├── /src/
-│   │   ├── /components/    # Reusable Vue components
-│   │   ├── /views/         # Page components
-│   │   ├── /store/         # Vuex state management
-│   │   ├── /services/      # Frontend service layer
-│   │   ├── /utils/         # Frontend utilities
-│   │   └── /assets/        # Static assets
-│   │
-│   ├── /tests/             # Frontend tests
-│   │   ├── /unit/          # Component unit tests
-│   │   └── /e2e/           # End-to-end tests
-│   │
-│   ├── vue.config.js       # Vue CLI configuration
-│   └── package.json        # Frontend dependencies
-│
-├── /docs/                  # Project documentation
-├── /data/                  # Local data storage (SQLite DB)
-├── .env                    # Environment configuration
-├── package.json            # Project-wide dependencies
-└── README.md               # Project overview and setup instructions
-```
-
-## Future Expansion Potential
-- Multi-game Dashboard Concept
-- Advanced Analytics
-- Machine Learning Integration
-- Community Features
-
-## Component Details
-
-### Torn API Client
-- **Status**: Completed
-- **Purpose**: Handles communication with Torn's API, including authentication, rate limiting, and caching
-- **Current Challenges**: None - Implementation complete with proper rate limiting and error handling
-- **Files**:
-  - `server/services/torn-api/client.js`
-  - `server/config/api-config.js`
-  - `server/services/torn-api/example-service.js`
-  - `server/tests/unit/services/torn-api/client.test.js`
-
-### Database System
-- **Status**: Implemented
-- **Purpose**: Stores user data, API keys, and game information
-- **Current Challenges**: Testing database concurrency and performance
-- **Files**:
-  - `server/db/schema.js`
-  - `server/db/models/user.js`
-  - `server/db/models/api-key.js`
-
-### API Routes
-- **Status**: Implemented
-- **Purpose**: Provides endpoints for managing API keys and user data
-- **Current Challenges**: Need to test with real Torn API data
-- **Files**:
-  - `server/api/index.js`
-  - `server/api/api-keys.js`
-  - `server/api/auth.js`
-  - `server/api/data.js`
-  - `server/api/test.js`
-
-### Authentication System
-- **Status**: Implemented, needs testing
-- **Purpose**: Manages user registration and authentication using Torn API keys
-- **Current Challenges**: Need to test the full authentication flow
-- **Files**:
-  - `server/services/auth/auth-service.js`
-  - `server/api/auth.js`
-  - `server/middleware/auth.js`
-
-### Data Polling Service
-- **Status**: Implemented
-- **Purpose**: Regularly fetches and caches data from the Torn API
-- **Current Challenges**: Need to tune polling intervals based on usage
-- **Files**:
-  - `server/services/polling/polling-service.js`
-  - `server/services/data/data-service.js`
-
-### Faction Tracker System
-- **Status**: Implemented, needs testing
-- **Purpose**: Tracks faction data, members, and war activities
-- **Current Challenges**: Testing with real Torn API data and optimizing polling frequency
-- **Files**:
-  - `server/services/faction-tracker/faction-tracker-service.js`
-  - `server/services/faction-tracker/faction-poller.js`
-  - `server/services/faction-tracker/api-key-manager.js`
-  - `server/services/faction-tracker/data-processor.js`
-  - `server/services/faction-tracker/war-tracker.js`
-  - `server/api/faction-tracker.js`
-  - `server/scripts/init-faction-db.js`
-
-## Database and API Integration
-
-This project includes a centralized data access layer using Knex for database operations. The following modules have been added:
-
-- **server/db/index.js**: Manages the database connection using Knex with a PostgreSQL client.
-- **server/models/faction.js**: Handles CRUD operations for faction data.
-- **server/models/user.js**: Manages basic user data interactions.
-- **server/models/factionWar.js**: Processes and stores detailed faction war data from the Torn API.
-- **server/models/userDetail.js**: Stores detailed user data retrieved from the Torn API, including full API payloads.
-- **server/models/userAccount.js**: Manages additional user account information such as settings, preferences, and login credentials (username and hashed password).
-- **server/services/torn-api/validateKey.js**: Validates Torn API keys to ensure only keys with "Public Only" access type are accepted.
-
-These modules help maintain a clean, modular architecture for our project and facilitate future enhancements, such as adding a Vue front end and switching databases if needed.
-
-## Testing Strategy
-
-### Types of Testing
-1. Unit Testing
-   - Individual module functionality
-   - Mock external dependencies
-   - Aim for 80% coverage on critical modules
-   - Examples of tests to create:
-     - API client rate limiting functionality (completed)
-     - Data model validation
-     - Authentication logic
-     - Configuration loading
-
-2. Integration Testing
-   - Module interaction validation
-   - API data fetching and storage
-   - Authentication flows
-   - Focus on key workflows:
-     - API data fetching and storage
-     - User authentication flow
-     - Data polling and processing
-
-3. End-to-End Testing
-   - Complete user journey testing
-   - Dashboard data visualization
-   - Configuration change impacts
-   - Test configuration changes and their effects
-   - Simulate API failures and rate limiting
-
-## Testing with Torn API Keys
-
-This project includes tests that can interact with the Torn API. These tests can run in two modes:
-
-### Mock Mode (Default)
-By default, tests use mock API responses and don't make actual API calls. This is suitable for:
-- CI/CD environments
-- Development without an API key
-- Quick test runs without API rate limiting concerns
-
-### Real API Mode
-For more thorough testing, you can configure real API keys:
-
-1. **Create a test configuration file**:
-   Create a file at `server/config/test-config.js` with your API keys:
-   ```javascript
-   module.exports = {
-     apiKeys: {
-       publicOnly: 'your-public-only-key',
-       higherAccess: 'your-higher-access-key' // Optional, for testing key validation
-     }
-   };
-   ```
-
-2. **Or set environment variables**:
+### Installation
+1. Clone the repository:
    ```bash
-   export TORN_API_KEY_PUBLIC_ONLY=your-public-only-key
-   export TORN_API_KEY_HIGHER_ACCESS=your-higher-access-key # Optional
+   git clone <repository-url>
+   cd torn-dashboard-server
    ```
 
-3. **For GitHub Actions**:
-   Add your API key as a repository secret named `TORN_API_KEY_PUBLIC_ONLY`
+2. Install dependencies:
+   ```bash
+   npm install
+   ```
+
+3. Set up the database:
+   - For development and testing, SQLite is used by default.
+   - For production, set the `DATABASE_URL` environment variable to your PostgreSQL connection string.
+
+4. Run database migrations:
+   ```bash
+   npm run migrate
+   ```
+
+5. Seed the database (if necessary):
+   ```bash
+   npm run seed
+   ```
+
+### Running the Server
+- **Development**: 
+  ```bash
+  npm run dev
+  ```
+- **Production**:
+  ```bash
+  npm start
+  ```
 
 ### Running Tests
-- Run all tests: `npm test`
-- Run only unit tests: `npm test -- --testPathPattern=unit`
-- Run only integration tests: `npm test -- --testPathPattern=integration`
-- Run all tests with coverage report: `npm run test:all`
-- Run specific test file: `npm run test -- --testPathPattern=torn-api-client.test.js`
+- Run all tests:
+  ```bash
+  npm test
+  ```
+- Run tests with coverage:
+  ```bash
+  npm run test:coverage
+  ```
 
-### API Usage Considerations
-- Tests are designed to minimize API calls
-- Integration tests that make real API calls have longer timeouts (10 seconds)
-- Tests will skip in CI environments unless explicitly enabled with `RUN_API_TESTS=true`
-- The Torn API has a limit of 100 requests per minute per key
+## Environment Variables
+- `NODE_ENV`: Set to `development`, `test`, or `production`.
+- `PORT`: Port number for the server to listen on (defaults to 3000 if not specified).
+- `DATABASE_URL`: PostgreSQL connection string for production.
+- `JWT_SECRET`: Secret key for JWT token signing.
+- `TORN_API_KEY`: API key for accessing the Torn API.
+91|- `CORS_ORIGIN`: Allowed origins for CORS (can be a comma-separated list).
 
-## Next Development Priorities
-1. Faction Tracker Reimplementation
-2. Frontend Dashboard Development
-3. Comprehensive Test Suite
-4. Performance Optimization
-5. Advanced Visualization Features
+## API Documentation
 
-Last Updated: March 12, 2025  
-Current Focus: Faction Tracker System Testing and Frontend Development
+### Authentication Endpoints
+
+#### Register
+- **Method**: POST
+- **URL**: `/api/auth/register`
+- **Request Body**:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "securepassword",
+    "tornId": "12345",
+    "tornApiKey": "your_torn_api_key"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "user": {
+      "id": 1,
+      "email": "user@example.com",
+      "tornId": "12345"
+    },
+    "token": "jwt_token_here"
+  }
+  ```
+- **Authentication**: None required
+
+#### Login
+- **Method**: POST
+- **URL**: `/api/auth/login`
+- **Request Body**:
+  ```json
+  {
+    "email": "user@example.com",
+    "password": "securepassword"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "user": {
+      "id": 1,
+      "email": "user@example.com",
+      "tornId": "12345"
+    },
+    "token": "jwt_token_here"
+  }
+  ```
+- **Authentication**: None required
+
+#### Logout
+- **Method**: POST
+- **URL**: `/api/auth/logout`
+- **Request Body**: None
+- **Response**: 
+  ```json
+  {
+    "message": "Logged out successfully"
+  }
+  ```
+- **Authentication**: JWT token required
+
+#### Get Profile
+- **Method**: GET
+- **URL**: `/api/auth/profile`
+- **Response**: 
+  ```json
+  {
+    "id": 1,
+    "email": "user@example.com",
+    "tornId": "12345",
+    "preferences": { /* user preferences */ }
+  }
+  ```
+- **Authentication**: JWT token required
+
+### API Keys Management
+
+#### Add API Key
+- **Method**: POST
+- **URL**: `/api/keys`
+- **Request Body**:
+  ```json
+  {
+    "key": "your_torn_api_key",
+    "description": "My primary API key"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "id": 1,
+    "key": "****hidden****", 
+    "description": "My primary API key",
+    "createdAt": "2023-11-10T12:00:00Z"
+  }
+  ```
+- **Authentication**: JWT token required
+
+#### List API Keys
+- **Method**: GET
+- **URL**: `/api/keys`
+- **Response**: 
+  ```json
+  [
+    {
+      "id": 1,
+      "key": "****hidden****", 
+      "description": "My primary API key",
+      "createdAt": "2023-11-10T12:00:00Z"
+    }
+  ]
+  ```
+- **Authentication**: JWT token required
+
+#### Delete API Key
+- **Method**: DELETE
+- **URL**: `/api/keys/:id`
+- **Response**: 
+  ```json
+  {
+    "message": "API key deleted successfully"
+  }
+  ```
+- **Authentication**: JWT token required
+
+### Data Endpoints
+
+#### Get Player Data
+- **Method**: GET
+- **URL**: `/api/data/player/:tornId`
+- **Response**: JSON object with player data from Torn API
+- **Authentication**: JWT token required
+
+#### Get Faction Data
+- **Method**: GET
+- **URL**: `/api/data/faction/:factionId`
+- **Response**: JSON object with faction data from Torn API
+- **Authentication**: JWT token required
+
+#### Get Item Market Data
+- **Method**: GET
+- **URL**: `/api/data/market/:itemId`
+- **Response**: JSON object with market data for the specified item
+- **Authentication**: JWT token required
+
+### Faction Tracker Endpoints
+
+#### Add Faction to Track
+- **Method**: POST
+- **URL**: `/api/factions/track`
+- **Request Body**:
+  ```json
+  {
+    "factionId": "12345"
+  }
+  ```
+- **Response**: 
+  ```json
+  {
+    "id": 1,
+    "factionId": "12345",
+    "name": "Faction Name",
+    "createdAt": "2023-11-10T12:00:00Z"
+  }
+  ```
+- **Authentication**: JWT token required
+
+#### List Tracked Factions
+- **Method**: GET
+- **URL**: `/api/factions/tracked`
+- **Response**: Array of tracked faction objects
+- **Authentication**: JWT token required
+
+#### Get Faction War Data
+- **Method**: GET
+- **URL**: `/api/factions/wars/:factionId`
+- **Response**: Array of war data for the specified faction
+- **Authentication**: JWT token required
+
+#### Stop Tracking Faction
+- **Method**: DELETE
+- **URL**: `/api/factions/track/:factionId`
+- **Response**: 
+  ```json
+  {
+    "message": "Faction removed from tracking"
+  }
+  ```
+- **Authentication**: JWT token required
+
+## Deployment
+
+### Production Environment Setup
+
+1. **Server Requirements**:
+   - Ubuntu 20.04 LTS or newer
+   - Node.js 16.x or newer
+   - PostgreSQL 13 or newer
+   - Nginx for reverse proxy
+
+2. **Initial Server Setup**:
+   ```bash
+   # Update system packages
+   sudo apt update && sudo apt upgrade -y
+   
+   # Install Node.js and npm
+   curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+   sudo apt install -y nodejs
+   
+   # Install PostgreSQL
+   sudo apt install -y postgresql postgresql-contrib
+   
+   # Install Nginx
+   sudo apt install -y nginx
+   
+   # Install PM2 globally
+   sudo npm install -g pm2
+   ```
+
+### Database Migration Steps
+
+1. **Create PostgreSQL Database**:
+   ```bash
+   sudo -u postgres psql
+   
+   CREATE DATABASE torn_dashboard;
+   CREATE USER torn_user WITH ENCRYPTED PASSWORD 'your_password';
+   GRANT ALL PRIVILEGES ON DATABASE torn_dashboard TO torn_user;
+   \q
+   ```
+
+2. **Set Up Environment Variables**:
+   Create a `.env` file in your project root with production settings:
+   ```
+   NODE_ENV=production
+   PORT=3000
+   DATABASE_URL=postgresql://torn_user:your_password@localhost:5432/torn_dashboard
+   JWT_SECRET=your_very_secure_jwt_secret
+   TORN_API_KEY=your_torn_api_key
+   CORS_ORIGIN=https://your-frontend-domain.com
+   ```
+
+3. **Run Migrations**:
+   ```bash
+   # Install dependencies
+   npm ci --production
+   
+   # Run migrations
+   NODE_ENV=production npm run migrate
+   ```
+
+### Process Management (PM2)
+
+1. **Start Application with PM2**:
+   ```bash
+   pm2 start npm --name "torn-dashboard" -- start
+   ```
+
+2. **Configure PM2 to Start on Boot**:
+   ```bash
+   pm2 startup
+   # Follow the instructions output by PM2
+   
+   # Save current PM2 configuration
+   pm2 save
+   ```
+
+3. **Common PM2 Commands**:
+   ```bash
+   # Check application status
+   pm2 status
+   
+   # View logs
+   pm2 logs torn-dashboard
+   
+   # Restart application
+   pm2 restart torn-dashboard
+   
+   # Stop application
+   pm2 stop torn-dashboard
+   ```
+
+### Nginx Reverse Proxy Setup
+
+1. **Create Nginx Configuration**:
+   ```bash
+   sudo nano /etc/nginx/sites-available/torn-dashboard
+   ```
+   
+   Add the following configuration:
+   ```nginx
+   server {
+       listen 80;
+       server_name your-domain.com;
+   
+       location / {
+           proxy_pass http://localhost:3000;
+           proxy_http_version 1.1;
+           proxy_set_header Upgrade $http_upgrade;
+           proxy_set_header Connection 'upgrade';
+           proxy_set_header Host $host;
+           proxy_cache_bypass $http_upgrade;
+       }
+   }
+   ```
+
+2. **Enable the Site and Restart Nginx**:
+   ```bash
+   sudo ln -s /etc/nginx/sites-available/torn-dashboard /etc/nginx/sites-enabled/
+   sudo nginx -t  # Test the configuration
+   sudo systemctl restart nginx
+   ```
+
+3. **Set Up SSL with Certbot (Let's Encrypt)**:
+   ```bash
+   sudo apt install -y certbot python3-certbot-nginx
+   sudo certbot --nginx -d your-domain.com
+   ```
+
+## Troubleshooting
+
+### Database Connection Issues
+
+1. **Connection Refused**:
+   - Verify PostgreSQL is running: `sudo systemctl status postgresql`
+   - Check connection string in `.env` file
+   - Ensure database user has correct permissions
+   - Check firewall settings: `sudo ufw status`
+
+2. **Migrations Failing**:
+   - Ensure your database is empty before initial migration
+   - Run with verbose flag for detailed errors: `npm run migrate -- --verbose`
+   - Check PostgreSQL logs: `sudo tail -f /var/log/postgresql/postgresql-<version>-main.log`
+
+### Authentication Problems
+
+1. **Cannot Register New Users**:
+   - Check if email already exists in the database
+   - Ensure all required fields are provided in registration request
+   - Verify email format is valid
+
+2. **JWT Token Issues**:
+   - Ensure `JWT_SECRET` is properly set in environment variables
+   - Check token expiration time (default is 24 hours)
+   - Verify that token is included in Authorization header as `Bearer <token>`
+
+3. **Login Failures**:
+   - Verify email and password combination
+   - Check if user account is active/not suspended
+   - Look for database connection issues
+
+### API Rate Limiting Issues
+
+1. **Torn API Rate Limits**:
+   - Default rate limit is 100 requests per minute per API key
+   - Use multiple API keys for higher throughput
+   - Implement staggered requests in high-demand scenarios
+   - Check rate limit headers in Torn API responses
+
+2. **Application Rate Limiting**:
+   - Default rate limit is 100 requests per minute per IP
+   - Adjust in `api/index.js` if needed for specific use cases
+
+### Environment Setup Problems
+
+1. **Missing Environment Variables**:
+   - Ensure all required variables are defined in `.env` file
+   - Check that the `.env` file is in the root directory
+   - Verify that environment variables are loaded correctly
+
+2. **Node Version Compatibility**:
+   - Ensure you're using Node.js 16.x or newer
+   - Check for deprecation warnings in logs
+   - Verify package compatibility with `npm ls`
+
+### Known Limitations
+
+1. **Data Freshness**:
+   - Torn API data is cached for up to 5 minutes
+   - Some endpoints have longer cache periods (faction data: 15 minutes)
+   - Polling service minimum interval is 5 minutes to avoid rate limiting
+
+2. **API Key Permissions**:
+   - Some endpoints require specific API key permissions in Torn
+   - Check that your API key has the necessary scopes
+   - Use dedicated API keys for specific purposes (e.g., one for player data, one for faction data)
+
+3. **Database Performance**:
+   - Indexes may need optimization for large datasets
+   - Consider database connection pooling for high traffic
+   - Monitor query performance in production
+
+## Contributing
+Contributions are welcome! Please fork the repository and submit a pull request.
+
+## License
+This project is licensed under the MIT License. 

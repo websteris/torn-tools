@@ -9,6 +9,7 @@ const NodeCache = require('node-cache');
 const { promisify } = require('util');
 const { logger } = require('../../utils/logger');
 const config = require('../../config/api-config');
+const fetch = require('node-fetch');
 
 /**
  * TornApiClient class to handle all API interactions with rate limiting and caching
@@ -319,4 +320,59 @@ class TornApiClient {
   }
 }
 
-module.exports = TornApiClient;
+// Get API key from environment or config
+const getApiKey = () => {
+  try {
+    const config = require('../../config/test-config');
+    return config.apiKeys.test;
+  } catch (error) {
+    return process.env.TORN_API_KEY || 'mock-api-key-for-tests';
+  }
+};
+
+/**
+ * Get user data from Torn API
+ * @param {string} [apiKey] - Optional API key, will use default if not provided
+ * @param {Array<string>} [selections] - Optional selections to request
+ * @returns {Promise<Object>} User data
+ */
+async function getUserData(apiKey = getApiKey(), selections = []) {
+  const selectionsParam = selections.length > 0 ? `&selections=${selections.join(',')}` : '';
+  const url = `https://api.torn.com/user/?key=${apiKey}${selectionsParam}`;
+  
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  // Check for API errors
+  if (data.error) {
+    throw new Error(`API Error: ${data.error.error}`);
+  }
+  
+  return data;
+}
+
+/**
+ * Get war opponents from Torn API
+ * @param {string} [apiKey] - Optional API key, will use default if not provided
+ * @returns {Promise<Array>} War opponents
+ */
+async function getWarOpponents(apiKey = getApiKey()) {
+  const url = `https://api.torn.com/faction/?key=${apiKey}&selections=rankedwars`;
+  
+  const response = await fetch(url);
+  const data = await response.json();
+  
+  // Check for API errors
+  if (data.error) {
+    throw new Error(`API Error: ${data.error.error}`);
+  }
+  
+  // Process the response to extract war opponents
+  // This is a simplified version for testing
+  return data.ranked_wars ? Object.values(data.ranked_wars) : [];
+}
+
+module.exports = {
+  getUserData,
+  getWarOpponents
+};

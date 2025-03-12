@@ -4,6 +4,13 @@
  * @jest-environment node
  */
 
+/**
+ * Tests for the authentication service
+ * 
+ * This service is responsible for user authentication, registration,
+ * and token management
+ */
+
 // Test configuration import with error handling
 let testConfig;
 try {
@@ -36,7 +43,31 @@ jest.mock('../../../../utils/logger', () => ({
   }
 }));
 
-describe('Module: AuthService', () => {
+// Mock the user model
+jest.mock('../../../../models/userAccount', () => ({
+  getUserAccountById: jest.fn(),
+  createUserAccount: jest.fn(),
+  updateUserAccount: jest.fn(),
+  upsertUserAccount: jest.fn()
+}));
+
+// Mock bcrypt for password hashing
+jest.mock('bcrypt', () => ({
+  hash: jest.fn().mockResolvedValue('hashed-password'),
+  compare: jest.fn().mockResolvedValue(true)
+}));
+
+// Mock jsonwebtoken for token generation
+jest.mock('jsonwebtoken', () => ({
+  sign: jest.fn().mockReturnValue('mock-token'),
+  verify: jest.fn().mockReturnValue({ player_id: 12345 })
+}));
+
+const userAccountModel = require('../../../../models/userAccount');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+
+describe('Auth Service', () => {
   beforeEach(() => {
     jest.clearAllMocks();
     
@@ -59,123 +90,267 @@ describe('Module: AuthService', () => {
     };
   });
   
-  describe('registerWithApiKey', () => {
-    test('should create a new user when not found', async () => {
-      // Mock user not already existing
-      userModel.findByTornId = jest.fn().mockResolvedValue(null);
+  describe('registerUser', () => {
+    it('should register a new user', async () => {
+      // Mock data
+      const userData = {
+        player_id: 12345,
+        name: 'Test User',
+        username: 'testuser',
+        password: 'password123',
+        preferences: { theme: 'dark' }
+      };
       
-      // Mock user creation
-      userModel.create = jest.fn().mockResolvedValue({
-        id: 1,
-        username: testConfig.testUser.name,
-        torn_id: testConfig.testUser.torn_id
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue(null);
+      userAccountModel.createUserAccount.mockResolvedValue({
+        player_id: userData.player_id,
+        name: userData.name,
+        username: userData.username
       });
       
-      // Mock API key creation
-      apiKeyModel.create = jest.fn().mockResolvedValue({
-        id: 1,
-        user_id: 1,
-        key_name: 'Test Key',
-        encrypted: 1
-      });
+      // Call the function
+      const result = await authService.registerUser(userData);
       
-      // Test registration
-      const result = await authService.registerWithApiKey({
-        apiKey: testConfig.apiKeys.test,
-        keyName: 'Test Key'
-      });
+      // Verify the model was called with the correct data
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(userData.player_id);
+      expect(userAccountModel.createUserAccount).toHaveBeenCalledWith(expect.objectContaining({
+        player_id: userData.player_id,
+        name: userData.name,
+        username: userData.username,
+        password_hash: 'hashed-password'
+      }));
       
-      // Assertions
-      expect(userModel.findByTornId).toHaveBeenCalledWith(testConfig.testUser.torn_id);
-      expect(userModel.create).toHaveBeenCalled();
-      expect(apiKeyModel.create).toHaveBeenCalled();
-      expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('sessionToken');
-      expect(result.user.torn_id).toBe(testConfig.testUser.torn_id);
+      // Verify the result
+      expect(result).toHaveProperty('player_id', userData.player_id);
+      expect(result).toHaveProperty('name', userData.name);
+      expect(result).toHaveProperty('username', userData.username);
+      expect(result).not.toHaveProperty('password');
+      expect(result).not.toHaveProperty('password_hash');
     });
     
-    test('should return existing user when already registered', async () => {
-      // Mock user already existing
-      userModel.findByTornId = jest.fn().mockResolvedValue({
-        id: 1,
-        username: testConfig.testUser.name,
-        torn_id: testConfig.testUser.torn_id,
-        faction_id: testConfig.testUser.faction_id || 0,
-        faction_name: testConfig.testUser.faction_name || 'None'
+    it('should throw an error if the user already exists', async () => {
+      // Mock data
+      const userData = {
+        player_id: 12345,
+        name: 'Test User',
+        username: 'testuser',
+        password: 'password123'
+      };
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue({
+        player_id: userData.player_id,
+        name: userData.name,
+        username: userData.username
       });
       
-      // Mock update function if needed
-      userModel.update = jest.fn().mockResolvedValue({
-        id: 1,
-        username: testConfig.testUser.name,
-        torn_id: testConfig.testUser.torn_id,
-        faction_id: testConfig.testUser.faction_id || 0,
-        faction_name: testConfig.testUser.faction_name || 'None'
-      });
+      // Call the function and expect it to throw
+      await expect(authService.registerUser(userData)).rejects.toThrow('User already exists');
       
-      // Test registration with existing user
-      const result = await authService.registerWithApiKey({
-        apiKey: testConfig.apiKeys.test,
-        keyName: 'Test Key'
-      });
-      
-      // Assertions
-      expect(userModel.findByTornId).toHaveBeenCalledWith(testConfig.testUser.torn_id);
-      expect(userModel.create).not.toHaveBeenCalled();
-      expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('sessionToken');
-      expect(result.user.torn_id).toBe(testConfig.testUser.torn_id);
-    });
-    
-    test('should throw error when API key is invalid', async () => {
-      // Test registration with invalid key
-      await expect(
-        authService.registerWithApiKey({
-          apiKey: 'invalid_key',
-          keyName: 'Test Key'
-        })
-      ).rejects.toThrow();
+      // Verify the model was called
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(userData.player_id);
+      expect(userAccountModel.createUserAccount).not.toHaveBeenCalled();
     });
   });
   
-  describe('authenticateWithApiKey', () => {
-    test('should authenticate existing user', async () => {
-      // Mock user found
-      userModel.findByTornId = jest.fn().mockResolvedValue({
-        id: 1,
-        username: testConfig.testUser.name,
-        torn_id: testConfig.testUser.torn_id,
-        faction_id: testConfig.testUser.faction_id || 0,
-        faction_name: testConfig.testUser.faction_name || 'None'
+  describe('loginUser', () => {
+    it('should login a user with valid credentials', async () => {
+      // Mock data
+      const credentials = {
+        username: 'testuser',
+        password: 'password123'
+      };
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue({
+        player_id: 12345,
+        name: 'Test User',
+        username: 'testuser',
+        password_hash: 'hashed-password'
       });
       
-      // Test authentication
-      const result = await authService.authenticateWithApiKey(testConfig.apiKeys.test);
+      // Mock bcrypt.compare to return true (password matches)
+      bcrypt.compare.mockResolvedValue(true);
       
-      // Assertions
-      expect(userModel.findByTornId).toHaveBeenCalledWith(testConfig.testUser.torn_id);
+      // Call the function
+      const result = await authService.loginUser(credentials);
+      
+      // Verify the model was called
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalled();
+      
+      // Verify bcrypt.compare was called with the correct arguments
+      expect(bcrypt.compare).toHaveBeenCalledWith(credentials.password, 'hashed-password');
+      
+      // Verify the result
+      expect(result).toHaveProperty('token', 'mock-token');
       expect(result).toHaveProperty('user');
-      expect(result).toHaveProperty('sessionToken');
+      expect(result.user).toHaveProperty('player_id', 12345);
+      expect(result.user).toHaveProperty('name', 'Test User');
+      expect(result.user).not.toHaveProperty('password_hash');
     });
     
-    test('should throw error when user not registered', async () => {
-      // Mock user not found
-      userModel.findByTornId = jest.fn().mockResolvedValue(null);
+    it('should throw an error if the user does not exist', async () => {
+      // Mock data
+      const credentials = {
+        username: 'nonexistent',
+        password: 'password123'
+      };
       
-      // Test authentication with unregistered user
-      await expect(
-        authService.authenticateWithApiKey(testConfig.apiKeys.test)
-      ).rejects.toThrow('User not registered');
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue(null);
+      
+      // Call the function and expect it to throw
+      await expect(authService.loginUser(credentials)).rejects.toThrow('Invalid credentials');
+      
+      // Verify the model was called
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalled();
+      expect(bcrypt.compare).not.toHaveBeenCalled();
+    });
+    
+    it('should throw an error if the password is incorrect', async () => {
+      // Mock data
+      const credentials = {
+        username: 'testuser',
+        password: 'wrongpassword'
+      };
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue({
+        player_id: 12345,
+        name: 'Test User',
+        username: 'testuser',
+        password_hash: 'hashed-password'
+      });
+      
+      // Mock bcrypt.compare to return false (password doesn't match)
+      bcrypt.compare.mockResolvedValue(false);
+      
+      // Call the function and expect it to throw
+      await expect(authService.loginUser(credentials)).rejects.toThrow('Invalid credentials');
+      
+      // Verify the model was called
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalled();
+      expect(bcrypt.compare).toHaveBeenCalledWith(credentials.password, 'hashed-password');
     });
   });
   
-  describe('validateSession', () => {
-    test('should validate session token', async () => {
-      // Currently this is a stub in your implementation
-      const result = await authService.validateSession('valid_token');
+  describe('verifyToken', () => {
+    it('should verify a valid token', async () => {
+      // Mock data
+      const token = 'valid-token';
       
-      // Should return true
-      expect(result).toBe(true);
+      // Mock jwt.verify to return a decoded token
+      jwt.verify.mockReturnValue({ player_id: 12345 });
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue({
+        player_id: 12345,
+        name: 'Test User',
+        username: 'testuser'
+      });
+      
+      // Call the function
+      const result = await authService.verifyToken(token);
+      
+      // Verify jwt.verify was called with the correct arguments
+      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String));
+      
+      // Verify the model was called
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(12345);
+      
+      // Verify the result
+      expect(result).toHaveProperty('player_id', 12345);
+      expect(result).toHaveProperty('name', 'Test User');
+      expect(result).not.toHaveProperty('password_hash');
+    });
+    
+    it('should throw an error if the token is invalid', async () => {
+      // Mock data
+      const token = 'invalid-token';
+      
+      // Mock jwt.verify to throw an error
+      jwt.verify.mockImplementation(() => {
+        throw new Error('Invalid token');
+      });
+      
+      // Call the function and expect it to throw
+      await expect(authService.verifyToken(token)).rejects.toThrow('Invalid token');
+      
+      // Verify jwt.verify was called
+      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String));
+      expect(userAccountModel.getUserAccountById).not.toHaveBeenCalled();
+    });
+    
+    it('should throw an error if the user does not exist', async () => {
+      // Mock data
+      const token = 'valid-token';
+      
+      // Mock jwt.verify to return a decoded token
+      jwt.verify.mockReturnValue({ player_id: 12345 });
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue(null);
+      
+      // Call the function and expect it to throw
+      await expect(authService.verifyToken(token)).rejects.toThrow('User not found');
+      
+      // Verify jwt.verify was called
+      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String));
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(12345);
+    });
+  });
+  
+  describe('updateUserPreferences', () => {
+    it('should update user preferences', async () => {
+      // Mock data
+      const player_id = 12345;
+      const preferences = { theme: 'light', notifications: true };
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue({
+        player_id,
+        name: 'Test User',
+        username: 'testuser',
+        preferences: JSON.stringify({ theme: 'dark' })
+      });
+      
+      userAccountModel.updateUserAccount.mockResolvedValue({
+        player_id,
+        name: 'Test User',
+        username: 'testuser',
+        preferences: JSON.stringify(preferences)
+      });
+      
+      // Call the function
+      const result = await authService.updateUserPreferences(player_id, preferences);
+      
+      // Verify the model was called with the correct data
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(player_id);
+      expect(userAccountModel.updateUserAccount).toHaveBeenCalledWith(player_id, expect.objectContaining({
+        preferences
+      }));
+      
+      // Verify the result
+      expect(result).toHaveProperty('player_id', player_id);
+      expect(result).toHaveProperty('preferences');
+      expect(JSON.parse(result.preferences)).toEqual(preferences);
+    });
+    
+    it('should throw an error if the user does not exist', async () => {
+      // Mock data
+      const player_id = 12345;
+      const preferences = { theme: 'light' };
+      
+      // Mock the model response
+      userAccountModel.getUserAccountById.mockResolvedValue(null);
+      
+      // Call the function and expect it to throw
+      await expect(authService.updateUserPreferences(player_id, preferences)).rejects.toThrow('User not found');
+      
+      // Verify the model was called
+      expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(player_id);
+      expect(userAccountModel.updateUserAccount).not.toHaveBeenCalled();
     });
   });
 });

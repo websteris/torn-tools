@@ -244,3 +244,61 @@ module.exports = new ModelName();
 
 Last Updated: March 10, 2025  
 Current Focus: Faction Tracker System Testing and Frontend Development
+
+## Database and API Integration
+
+This project now includes a centralized data access layer using Knex for database operations. The following modules have been added:
+
+- **server/db/index.js**: Manages the database connection using Knex with a PostgreSQL client.
+- **server/models/faction.js**: Handles CRUD operations for faction data.
+- **server/models/user.js**: Manages basic user data interactions.
+- **server/models/factionWar.js**: Processes and stores detailed faction war data from the Torn API.
+- **server/models/userDetail.js**: Stores detailed user data retrieved from the Torn API, including full API payloads.
+- **server/models/userAccount.js**: Manages additional user account information such as settings, preferences, and login credentials (username and hashed password).
+- **server/services/torn-api/validateKey.js**: Validates Torn API keys to ensure only keys with "Public Only" access type are accepted.
+
+These modules help maintain a clean, modular architecture for our project and facilitate future enhancements, such as adding a Vue front end and switching databases if needed.
+
+## Testing with Torn API Keys
+
+This project includes tests that can interact with the Torn API. These tests can run in two modes:
+
+### Mock Mode (Default)
+By default, tests use mock API responses and don't make actual API calls. This is suitable for:
+- CI/CD environments
+- Development without an API key
+- Quick test runs without API rate limiting concerns
+
+### Real API Mode
+For more thorough testing, you can configure real API keys:
+
+1. **Create a test configuration file**:
+   Create a file at `server/config/test-config.js` with your API keys:
+   ```javascript
+   module.exports = {
+     apiKeys: {
+       publicOnly: 'your-public-only-key',
+       higherAccess: 'your-higher-access-key' // Optional, for testing key validation
+     }
+   };
+   ```
+
+2. **Or set environment variables**:
+   ```bash
+   export TORN_API_KEY_PUBLIC_ONLY=your-public-only-key
+   export TORN_API_KEY_HIGHER_ACCESS=your-higher-access-key # Optional
+   ```
+
+3. **For GitHub Actions**:
+   Add your API key as a repository secret named `TORN_API_KEY_PUBLIC_ONLY`
+
+### Running Tests
+- Run all tests: `npm test`
+- Run only unit tests: `npm test -- --testPathPattern=unit`
+- Run only integration tests: `npm test -- --testPathPattern=integration`
+
+### API Usage Considerations
+- Tests are designed to minimize API calls
+- Integration tests that make real API calls have longer timeouts (10 seconds)
+- Tests will skip in CI environments unless explicitly enabled with `RUN_API_TESTS=true`
+- The Torn API has a limit of 100 requests per minute per key

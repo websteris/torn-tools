@@ -3,19 +3,18 @@
  */
 module.exports = {
   testEnvironment: 'node',
-  collectCoverage: false,
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov'],
-  coveragePathIgnorePatterns: ['/node_modules/'],
-  testMatch: ['**/tests/**/*.test.js'],  // Only look for tests in the tests directory
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/api/test.js'        // Specifically ignore the api/test.js file
+  testMatch: ['**/*.test.js'],
+  collectCoverageFrom: [
+    '**/*.js',
+    '!**/node_modules/**',
+    '!**/coverage/**',
+    '!**/tests/**',
+    '!jest.config.js'
   ],
-  // Default timeout for tests (10 seconds instead of 5)
-  testTimeout: 10000,
-  // Setup files to run before tests
+  // Use the correct property name for coverage reporters
+  coverageReporters: ['text', 'lcov'],
+  // Set a longer timeout for integration tests that make API calls
+  testTimeout: 30000,
+  // Setup files if needed
   // setupFilesAfterEnv: ['./tests/setup.js'],
-  // Mock implementations
-  // moduleNameMapper: {}
 };

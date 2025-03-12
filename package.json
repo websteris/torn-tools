@@ -6,7 +6,7 @@
     "start": "node server/server.js",
     "dev": "cd server && npm run dev",
     "test": "cd server && npm run test",
-    "test:coverage": "cd server && npm run test:coverage",
+    "test:coverage": "cd server && npm run test -- --coverage --coverageReporters=text --coverageReporters=lcov",
     "init-db": "node server/scripts/init-db.js",
     "install-all": "npm install && cd server && npm install",
     "client-install": "cd client && npm install",

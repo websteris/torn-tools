@@ -1,71 +1,70 @@
 /**
  * @module Logger
- * @description Simple logging utility for the application
+ * @description Logging utility for consistent logging throughout the application
  */
 
-const winston = require('winston');
-const path = require('path');
-const fs = require('fs');
+// Simple logger implementation
+// In a production app, you might want to use a more robust solution like winston or pino
 
-// Ensure logs directory exists
-const logDir = path.join(process.cwd(), 'logs');
-if (!fs.existsSync(logDir)) {
-  fs.mkdirSync(logDir);
+/**
+ * Format a log message with timestamp and level
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {Object} [data] - Additional data to log
+ * @returns {string} Formatted log message
+ */
+function formatLogMessage(level, message, data) {
+  const timestamp = new Date().toISOString();
+  let formattedMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+  
+  if (data) {
+    try {
+      formattedMessage += ` ${JSON.stringify(data)}`;
+    } catch (error) {
+      formattedMessage += ` [Error stringifying data: ${error.message}]`;
+    }
+  }
+  
+  return formattedMessage;
 }
 
-// Define log format
-const logFormat = winston.format.combine(
-  winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
-  winston.format.errors({ stack: true }),
-  winston.format.splat(),
-  winston.format.printf(({ level, message, timestamp, ...meta }) => {
-    return `${timestamp} ${level.toUpperCase()}: ${message} ${Object.keys(meta).length ? JSON.stringify(meta, null, 2) : ''}`;
-  })
-);
-
-// Create logger instance
-const logger = winston.createLogger({
-  level: process.env.LOG_LEVEL || 'info',
-  format: logFormat,
-  defaultMeta: { service: 'torn-dashboard' },
-  transports: [
-    // Console transport
-    new winston.transports.Console({
-      format: winston.format.combine(
-        winston.format.colorize(),
-        logFormat
-      )
-    }),
-    // File transport for errors
-    new winston.transports.File({ 
-      filename: path.join(logDir, 'error.log'), 
-      level: 'error',
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
-    }),
-    // File transport for all logs
-    new winston.transports.File({ 
-      filename: path.join(logDir, 'combined.log'),
-      maxsize: 10485760, // 10MB
-      maxFiles: 5
-    })
-  ],
-  // Handle uncaught exceptions and rejections
-  exceptionHandlers: [
-    new winston.transports.File({ 
-      filename: path.join(logDir, 'exceptions.log'),
-      maxsize: 5242880, // 5MB
-      maxFiles: 5
-    })
-  ]
-});
-
-// Export configured logger
-module.exports = {
-  logger,
+/**
+ * Log a message to the console
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {Object} [data] - Additional data to log
+ */
+function log(level, message, data) {
+  const formattedMessage = formatLogMessage(level, message, data);
   
-  // Create a child logger with component context
-  createLogger: (component) => {
-    return logger.child({ component });
+  switch (level.toLowerCase()) {
+    case 'error':
+      console.error(formattedMessage);
+      break;
+    case 'warn':
+      console.warn(formattedMessage);
+      break;
+    case 'info':
+      console.info(formattedMessage);
+      break;
+    case 'debug':
+      console.debug(formattedMessage);
+      break;
+    default:
+      console.log(formattedMessage);
   }
+}
+
+// Logger instance
+const logger = {
+  error: (message, data) => log('error', message, data),
+  warn: (message, data) => log('warn', message, data),
+  info: (message, data) => log('info', message, data),
+  debug: (message, data) => log('debug', message, data),
+  log: (message, data) => log('log', message, data)
+};
+
+// Export logger
+module.exports = {
+  logger
 };

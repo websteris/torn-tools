@@ -1,189 +1,164 @@
 /**
  * @module AuthService
- * @description Authentication service for managing users and sessions
+ * @description Service for user authentication, registration, and token management
  */
 
-const crypto = require('crypto');
-const userModel = require('../../db/models/user');
-const apiKeyModel = require('../../db/models/api-key');
-const TornApiClient = require('../torn-api/client');
-const { logger } = require('../../utils/logger');
+const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+const userAccountModel = require('../../models/userAccount');
+const logger = require('../../utils/logger').logger;
 
-class AuthService {
-  constructor() {
-    this.apiClient = new TornApiClient();
-  }
+// JWT secret key - should be in environment variables in production
+const JWT_SECRET = process.env.JWT_SECRET || 'torn-dashboard-secret-key';
+const JWT_EXPIRATION = '24h';
+const SALT_ROUNDS = 10;
 
-  /**
-   * Register a new user using their Torn API key
-   * @param {Object} userData - User registration data
-   * @param {string} userData.apiKey - Torn API key
-   * @param {string} [userData.keyName] - Optional name for the API key
-   * @returns {Promise<Object>} Registered user data and session token
-   */
-  async registerWithApiKey(userData) {
-    const { apiKey, keyName = 'Primary API Key' } = userData;
-
-    if (!apiKey) {
-      throw new Error('API key is required');
+/**
+ * Register a new user
+ * @param {Object} userData - User data
+ * @param {number} userData.player_id - Torn player ID
+ * @param {string} userData.name - User's name
+ * @param {string} userData.username - Username for login
+ * @param {string} userData.password - Password (will be hashed)
+ * @param {Object} [userData.preferences] - User preferences
+ * @returns {Promise<Object>} Created user (without password)
+ * @throws {Error} If user already exists
+ */
+async function registerUser(userData) {
+  try {
+    // Check if user already exists
+    const existingUser = await userAccountModel.getUserAccountById(userData.player_id);
+    if (existingUser) {
+      throw new Error('User already exists');
     }
-
-    try {
-      // Verify API key by fetching user data from Torn API
-      logger.info('Verifying API key with Torn API');
-      const tornUserData = await this.apiClient.getUserData(apiKey, ['profile', 'personalstats']);
-      
-      if (!tornUserData || !tornUserData.player_id) {
-        throw new Error('Invalid API key or unable to fetch user data from Torn API');
-      }
-
-      // Extract relevant user data
-      const tornUserId = tornUserData.player_id;
-      const tornUserName = tornUserData.name;
-      const faction = tornUserData.faction || {};
-      const tornFactionId = faction.faction_id;
-      const tornFactionName = faction.faction_name;
-
-      // Check if user already exists
-      const existingUser = await userModel.findByTornId(tornUserId);
-      
-      if (existingUser) {
-        logger.info(`User with Torn ID ${tornUserId} already exists`);
-        
-        // Update user information if needed
-        if (
-          existingUser.username !== tornUserName ||
-          existingUser.faction_id !== tornFactionId ||
-          existingUser.faction_name !== tornFactionName
-        ) {
-          await userModel.update(existingUser.id, {
-            username: tornUserName,
-            faction_id: tornFactionId,
-            faction_name: tornFactionName
-          });
-        }
-        
-        // Generate a session token
-        const sessionToken = this._generateSessionToken();
-        
-        return {
-          user: {
-            id: existingUser.id,
-            username: tornUserName,
-            torn_id: tornUserId,
-            faction_id: tornFactionId,
-            faction_name: tornFactionName
-          },
-          sessionToken
-        };
-      }
-
-      // Create a new user
-      logger.info(`Creating new user for Torn ID ${tornUserId}`);
-      const password = crypto.randomBytes(16).toString('hex'); // Generate a random password
-      
-      const newUser = await userModel.create({
-        username: tornUserName,
-        password,
-        torn_id: tornUserId,
-        faction_id: tornFactionId,
-        faction_name: tornFactionName
-      });
-
-      // Store the API key
-      await apiKeyModel.create({
-        user_id: newUser.id,
-        key_name: keyName,
-        key_value: apiKey,
-        encrypted: true,
-        active: true
-      });
-
-      // Generate a session token
-      const sessionToken = this._generateSessionToken();
-      
-      return {
-        user: {
-          id: newUser.id,
-          username: newUser.username,
-          torn_id: tornUserId,
-          faction_id: tornFactionId,
-          faction_name: tornFactionName
-        },
-        sessionToken
-      };
-    } catch (error) {
-      logger.error(`Error registering user with API key: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Authenticate a user using their Torn API key
-   * @param {string} apiKey - Torn API key
-   * @returns {Promise<Object>} User data and session token
-   */
-  async authenticateWithApiKey(apiKey) {
-    if (!apiKey) {
-      throw new Error('API key is required');
-    }
-
-    try {
-      // Verify API key by fetching user data from Torn API
-      logger.info('Verifying API key with Torn API');
-      const tornUserData = await this.apiClient.getUserData(apiKey, ['profile']);
-      
-      if (!tornUserData || !tornUserData.player_id) {
-        throw new Error('Invalid API key or unable to fetch user data from Torn API');
-      }
-
-      // Find user by Torn ID
-      const tornUserId = tornUserData.player_id;
-      const user = await userModel.findByTornId(tornUserId);
-      
-      if (!user) {
-        logger.info(`User with Torn ID ${tornUserId} not found`);
-        throw new Error('User not registered. Please register first.');
-      }
-
-      // Generate a session token
-      const sessionToken = this._generateSessionToken();
-      
-      return {
-        user: {
-          id: user.id,
-          username: user.username,
-          torn_id: user.torn_id,
-          faction_id: user.faction_id,
-          faction_name: user.faction_name
-        },
-        sessionToken
-      };
-    } catch (error) {
-      logger.error(`Error authenticating with API key: ${error.message}`);
-      throw error;
-    }
-  }
-
-  /**
-   * Validate a session token
-   * @param {string} token - Session token
-   * @returns {Promise<boolean>} True if token is valid
-   */
-  async validateSession(token) {
-    // In a real implementation, you would validate the token against
-    // a database of active sessions. This is a placeholder.
-    return true;
-  }
-
-  /**
-   * Generate a new session token
-   * @private
-   * @returns {string} Session token
-   */
-  _generateSessionToken() {
-    return crypto.randomBytes(32).toString('hex');
+    
+    // Hash the password
+    const password_hash = await bcrypt.hash(userData.password, SALT_ROUNDS);
+    
+    // Create the user
+    const user = await userAccountModel.createUserAccount({
+      player_id: userData.player_id,
+      name: userData.name,
+      username: userData.username,
+      password_hash,
+      preferences: userData.preferences || {},
+      raw_data: { player_id: userData.player_id, name: userData.name }
+    });
+    
+    // Remove sensitive data before returning
+    const { password_hash: _, ...userWithoutPassword } = user;
+    
+    logger.info(`User registered: ${userData.username} (ID: ${userData.player_id})`);
+    return userWithoutPassword;
+  } catch (error) {
+    logger.error(`Error registering user: ${error.message}`);
+    throw error;
   }
 }
 
-module.exports = new AuthService();
+/**
+ * Login a user
+ * @param {Object} credentials - Login credentials
+ * @param {string} credentials.username - Username
+ * @param {string} credentials.password - Password
+ * @returns {Promise<Object>} Token and user data
+ * @throws {Error} If credentials are invalid
+ */
+async function loginUser(credentials) {
+  try {
+    // Find user by username
+    const users = await userAccountModel.getAllUsers();
+    const user = users.find(u => u.username === credentials.username);
+    
+    if (!user) {
+      throw new Error('Invalid credentials');
+    }
+    
+    // Verify password
+    const isPasswordValid = await bcrypt.compare(credentials.password, user.password_hash);
+    if (!isPasswordValid) {
+      throw new Error('Invalid credentials');
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign(
+      { player_id: user.player_id },
+      JWT_SECRET,
+      { expiresIn: JWT_EXPIRATION }
+    );
+    
+    // Remove sensitive data before returning
+    const { password_hash, ...userWithoutPassword } = user;
+    
+    logger.info(`User logged in: ${credentials.username} (ID: ${user.player_id})`);
+    return {
+      token,
+      user: userWithoutPassword
+    };
+  } catch (error) {
+    logger.error(`Error logging in user: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Verify a JWT token
+ * @param {string} token - JWT token
+ * @returns {Promise<Object>} User data
+ * @throws {Error} If token is invalid or user not found
+ */
+async function verifyToken(token) {
+  try {
+    // Verify token
+    const decoded = jwt.verify(token, JWT_SECRET);
+    
+    // Get user data
+    const user = await userAccountModel.getUserAccountById(decoded.player_id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Remove sensitive data before returning
+    const { password_hash, ...userWithoutPassword } = user;
+    
+    return userWithoutPassword;
+  } catch (error) {
+    logger.error(`Error verifying token: ${error.message}`);
+    throw error;
+  }
+}
+
+/**
+ * Update user preferences
+ * @param {number} player_id - User ID
+ * @param {Object} preferences - User preferences
+ * @returns {Promise<Object>} Updated user
+ * @throws {Error} If user not found
+ */
+async function updateUserPreferences(player_id, preferences) {
+  try {
+    // Check if user exists
+    const user = await userAccountModel.getUserAccountById(player_id);
+    if (!user) {
+      throw new Error('User not found');
+    }
+    
+    // Update preferences
+    const updatedUser = await userAccountModel.updateUserAccount(player_id, {
+      preferences
+    });
+    
+    logger.info(`Updated preferences for user ID: ${player_id}`);
+    return updatedUser;
+  } catch (error) {
+    logger.error(`Error updating user preferences: ${error.message}`);
+    throw error;
+  }
+}
+
+module.exports = {
+  registerUser,
+  loginUser,
+  verifyToken,
+  updateUserPreferences
+};

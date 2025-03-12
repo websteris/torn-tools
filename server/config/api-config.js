@@ -50,7 +50,7 @@ const config = {
      * Torn API has a limit of 100 requests per minute per key
      * We set to 95 to have a small buffer
      */
-    rateLimit: 95,
+    rateLimit: 100,
     
     /**
      * Request timeout in milliseconds

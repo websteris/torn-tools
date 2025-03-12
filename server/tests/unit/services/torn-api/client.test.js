@@ -20,10 +20,8 @@ try {
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const TornApiClient = require('../../../../services/torn-api/client');
-
-
-
-
+const fetch = require('node-fetch');
+const { getUserData, getWarOpponents } = require('../../../../services/torn-api/client');
 
 // Mock dependencies
 jest.mock('axios');
@@ -36,6 +34,9 @@ jest.mock('../../../../utils/logger', () => ({
     error: jest.fn()
   }
 }));
+
+jest.mock('node-fetch');
+const { Response } = jest.requireActual('node-fetch');
 
 // Helper to create mock response
 const createMockResponse = (data) => ({ 
@@ -306,5 +307,77 @@ describe('Module: TornApiClient', () => {
       apiKey: mockApiKey,
       selections: ['items']
     }));
+  });
+});
+
+describe('Torn API Client', () => {
+  // Import the client after mocking dependencies
+  const { getUserData, getWarOpponents } = require('../../../../services/torn-api/client');
+  
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  describe('getUserData', () => {
+    it('should fetch user data successfully', async () => {
+      const mockUserData = {
+        player_id: 123456,
+        name: 'TestUser',
+        level: 15,
+        faction: {
+          faction_id: 12345,
+          faction_name: 'Test Faction'
+        }
+      };
+
+      fetch.mockResolvedValueOnce(new Response(JSON.stringify(mockUserData), { status: 200 }));
+
+      const result = await getUserData();
+      expect(result).toEqual(mockUserData);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('https://api.torn.com/user/'));
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = { error: { code: 2, error: 'Incorrect key' } };
+      fetch.mockResolvedValueOnce(new Response(JSON.stringify(errorResponse), { status: 200 }));
+
+      await expect(getUserData()).rejects.toThrow('API Error: Incorrect key');
+    });
+
+    it('should handle network errors', async () => {
+      fetch.mockRejectedValueOnce(new Error('Network failure'));
+      await expect(getUserData()).rejects.toThrow('Network failure');
+    });
+  });
+
+  describe('getWarOpponents', () => {
+    it('should fetch war opponents successfully', async () => {
+      const mockWarData = [
+        { id: 12345, name: 'Enemy Faction 1', score: 1000 },
+        { id: 67890, name: 'Enemy Faction 2', score: 2000 }
+      ];
+
+      fetch.mockResolvedValueOnce(new Response(JSON.stringify(mockWarData), { status: 200 }));
+
+      const result = await getWarOpponents();
+      expect(result).toEqual(mockWarData);
+      expect(fetch).toHaveBeenCalledTimes(1);
+      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('https://api.torn.com/faction/'));
+    });
+
+    it('should handle API errors', async () => {
+      const errorResponse = { error: { code: 5, error: 'Too many requests' } };
+      fetch.mockResolvedValueOnce(new Response(JSON.stringify(errorResponse), { status: 200 }));
+
+      await expect(getWarOpponents()).rejects.toThrow('API Error: Too many requests');
+    });
+
+    it('should handle empty response', async () => {
+      fetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+
+      const result = await getWarOpponents();
+      expect(result).toEqual([]);
+    });
   });
 });

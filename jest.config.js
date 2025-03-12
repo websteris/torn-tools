@@ -1,19 +1,10 @@
 /**
- * Jest configuration for Torn Dashboard
+ * Jest configuration for Torn Dashboard (project-wide fallback)
  */
 module.exports = {
   testEnvironment: 'node',
-  collectCoverage: false,
-  coverageDirectory: 'coverage',
-  coverageReporters: ['text', 'lcov'],
   coveragePathIgnorePatterns: ['/node_modules/'],
-  testMatch: ['**/tests/**/*.test.js'],  // Only look for tests in the tests directory
-  testPathIgnorePatterns: [
-    '/node_modules/',
-    '/api/test.js'        // Specifically ignore the api/test.js file
-  ],
-  // Setup files to run before tests
-  // setupFilesAfterEnv: ['./server/tests/setup.js'],
-  // Mock implementations
-  // moduleNameMapper: {}
+  testMatch: ['**/tests/**/*.test.js'], // Broad match for all tests
+  testPathIgnorePatterns: ['/node_modules/', '/api/test.js'],
+  // No coverage settings here—handle via scripts
 };

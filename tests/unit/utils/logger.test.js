@@ -50,9 +50,13 @@ describe('Module: Logger', () => {
     // Act
     const componentLogger = createLogger('TestComponent');
     
-    // Assert
+    // Assert — createLogger returns a wrapper object exposing logging methods
+    // (it wraps winston's child logger), not the raw child logger itself.
     expect(mockWinston.createLogger).toHaveBeenCalled();
-    expect(componentLogger).toBe('child-logger');
+    expect(typeof componentLogger).toBe('object');
+    expect(typeof componentLogger.info).toBe('function');
+    expect(typeof componentLogger.error).toBe('function');
+    expect(typeof componentLogger.child).toBe('function');
   });
   
   test('should create directory if it does not exist', () => {

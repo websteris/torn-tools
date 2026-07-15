@@ -164,22 +164,22 @@ describe('Auth Service', () => {
         password: 'password123'
       };
       
-      // Mock the model response
-      userAccountModel.getUserAccountById.mockResolvedValue({
+      // Mock the model response — login looks the user up by username
+      userAccountModel.getUserAccountByUsername.mockResolvedValue({
         player_id: 12345,
         name: 'Test User',
         username: 'testuser',
         password_hash: 'hashed-password'
       });
-      
+
       // Mock bcrypt.compare to return true (password matches)
       bcrypt.compare.mockResolvedValue(true);
-      
+
       // Call the function
       const result = await authService.loginUser(credentials);
-      
+
       // Verify the model was called
-      expect(userAccountModel.getUserAccountById).toHaveBeenCalled();
+      expect(userAccountModel.getUserAccountByUsername).toHaveBeenCalledWith('testuser');
       
       // Verify bcrypt.compare was called with the correct arguments
       expect(bcrypt.compare).toHaveBeenCalledWith(credentials.password, 'hashed-password');
@@ -200,13 +200,13 @@ describe('Auth Service', () => {
       };
       
       // Mock the model response
-      userAccountModel.getUserAccountById.mockResolvedValue(null);
-      
+      userAccountModel.getUserAccountByUsername.mockResolvedValue(null);
+
       // Call the function and expect it to throw
       await expect(authService.loginUser(credentials)).rejects.toThrow('Invalid credentials');
-      
+
       // Verify the model was called
-      expect(userAccountModel.getUserAccountById).toHaveBeenCalled();
+      expect(userAccountModel.getUserAccountByUsername).toHaveBeenCalled();
       expect(bcrypt.compare).not.toHaveBeenCalled();
     });
     
@@ -218,13 +218,13 @@ describe('Auth Service', () => {
       };
       
       // Mock the model response
-      userAccountModel.getUserAccountById.mockResolvedValue({
+      userAccountModel.getUserAccountByUsername.mockResolvedValue({
         player_id: 12345,
         name: 'Test User',
         username: 'testuser',
         password_hash: 'hashed-password'
       });
-      
+
       // Mock bcrypt.compare to return false (password doesn't match)
       bcrypt.compare.mockResolvedValue(false);
       
@@ -232,7 +232,7 @@ describe('Auth Service', () => {
       await expect(authService.loginUser(credentials)).rejects.toThrow('Invalid credentials');
       
       // Verify the model was called
-      expect(userAccountModel.getUserAccountById).toHaveBeenCalled();
+      expect(userAccountModel.getUserAccountByUsername).toHaveBeenCalled();
       expect(bcrypt.compare).toHaveBeenCalledWith(credentials.password, 'hashed-password');
     });
   });

@@ -190,14 +190,15 @@ async function deleteUserAccount(player_id) {
 async function upsertUserAccount(userData) {
   try {
     // Check if user account exists
-    const existingUser = await getUserAccountById(userData.player_id);
+    // Call siblings via module.exports so they can be stubbed/spied in tests.
+    const existingUser = await module.exports.getUserAccountById(userData.player_id);
     
     if (existingUser) {
       // Update existing user account
-      return await updateUserAccount(userData.player_id, userData);
+      return await module.exports.updateUserAccount(userData.player_id, userData);
     } else {
       // Create new user account
-      return await createUserAccount(userData);
+      return await module.exports.createUserAccount(userData);
     }
   } catch (error) {
     logger.error(`Error upserting user account: ${error.message}`);

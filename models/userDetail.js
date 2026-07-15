@@ -103,16 +103,16 @@ async function updateUserDetail(player_id, userData) {
  */
 async function upsertUserDetail(userData) {
   try {
-    // Check if user exists
-    const existingUser = await getUserDetailById(userData.player_id);
-    
+    // Check if user exists — call siblings via module.exports so tests can spy them.
+    const existingUser = await module.exports.getUserDetailById(userData.player_id);
+
     // Update or create based on existence
     if (existingUser) {
       logger.debug(`Updating existing user detail for player ID ${userData.player_id}`);
-      return await updateUserDetail(userData.player_id, userData);
+      return await module.exports.updateUserDetail(userData.player_id, userData);
     } else {
       logger.debug(`Creating new user detail for player ID ${userData.player_id}`);
-      return await createUserDetail(userData);
+      return await module.exports.createUserDetail(userData);
     }
   } catch (error) {
     logger.error(`Error upserting user detail: ${error.message}`);

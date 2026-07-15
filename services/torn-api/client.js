@@ -366,9 +366,12 @@ async function getWarOpponents(apiKey = getApiKey()) {
   if (data.error) {
     throw new Error(`API Error: ${data.error.error}`);
   }
-  
-  // Process the response to extract war opponents
-  // This is a simplified version for testing
+
+  // Accept either an already-shaped array of opponents or the raw Torn API
+  // response ({ ranked_wars: { ... } }).
+  if (Array.isArray(data)) {
+    return data;
+  }
   return data.ranked_wars ? Object.values(data.ranked_wars) : [];
 }
 

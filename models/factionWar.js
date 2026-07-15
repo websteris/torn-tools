@@ -195,15 +195,15 @@ async function deleteFactionWar(factionId, opponentId) {
  */
 async function upsertFactionWar(warData) {
   try {
-    // Check if faction war exists
-    const existingWar = await getFactionWarByOpponent(warData.faction_id, warData.opponent_id);
-    
+    // Check if faction war exists — call siblings via module.exports so tests can spy them.
+    const existingWar = await module.exports.getFactionWarByOpponent(warData.faction_id, warData.opponent_id);
+
     if (existingWar) {
       // Update existing faction war
-      return await updateFactionWar(warData.faction_id, warData.opponent_id, warData);
+      return await module.exports.updateFactionWar(warData.faction_id, warData.opponent_id, warData);
     } else {
       // Create new faction war
-      return await createFactionWar(warData);
+      return await module.exports.createFactionWar(warData);
     }
   } catch (error) {
     logger.error(`Error upserting faction war: ${error.message}`);

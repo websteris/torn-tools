@@ -49,7 +49,9 @@ const createMockResponse = (data) => ({
 
 describe('Module: TornApiClient', () => {
   let apiClient;
-  const mockApiKey = testConfig.apiKeys.test;
+  // Unit tests must not depend on a real key from the environment; the test
+  // config is env-driven and returns null when TORN_API_KEY is unset.
+  const mockApiKey = testConfig.apiKeys.test || 'mock-api-key-for-unit-tests';
   
   beforeEach(() => {
     // Reset mocks

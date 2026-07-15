@@ -38,7 +38,7 @@ describe('UserAccount Model', () => {
 
       const result = await userAccountModel.getUserAccountById(123);
       
-      expect(db).toHaveBeenCalledWith('users');
+      expect(db).toHaveBeenCalledWith('user_accounts');
       expect(db.where).toHaveBeenCalledWith({ player_id: 123 });
       expect(result).toEqual(mockUser);
     });
@@ -70,7 +70,7 @@ describe('UserAccount Model', () => {
 
       const result = await userAccountModel.createUserAccount(accountData);
       
-      expect(db).toHaveBeenCalledWith('users');
+      expect(db).toHaveBeenCalledWith('user_accounts');
       expect(db.insert).toHaveBeenCalledWith(expect.objectContaining({
         player_id: 123,
         name: 'TestUser',
@@ -103,7 +103,7 @@ describe('UserAccount Model', () => {
 
       const result = await userAccountModel.createUserAccount(accountData);
       
-      expect(db).toHaveBeenCalledWith('users');
+      expect(db).toHaveBeenCalledWith('user_accounts');
       expect(result).toEqual(expectedRecord);
     });
   });
@@ -134,7 +134,7 @@ describe('UserAccount Model', () => {
 
       const result = await userAccountModel.updateUserAccount(playerId, accountData);
       
-      expect(db).toHaveBeenCalledWith('users');
+      expect(db).toHaveBeenCalledWith('user_accounts');
       expect(db.where).toHaveBeenCalledWith({ player_id: playerId });
       expect(result).toEqual(updatedUser);
     });
@@ -160,7 +160,7 @@ describe('UserAccount Model', () => {
 
       const result = await userAccountModel.updateUserAccount(playerId, accountData);
       
-      expect(db).toHaveBeenCalledWith('users');
+      expect(db).toHaveBeenCalledWith('user_accounts');
       expect(db.where).toHaveBeenCalledWith({ player_id: playerId });
       // Check that we're not sending undefined values to the database
       expect(db.where().update).not.toHaveBeenCalledWith(

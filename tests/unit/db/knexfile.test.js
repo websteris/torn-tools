@@ -84,8 +84,13 @@ describe('Knex Configuration', () => {
   it('should have proper connection settings for production', () => {
     const config = knexConfig.production;
     expect(config).toHaveProperty('connection');
-    // Should use environment variable
-    expect(config.connection).toBe(process.env.DATABASE_URL);
+    // Production uses DATABASE_URL when set, otherwise falls back to a
+    // connection object built from individual PROD_DB_* / DB_* vars.
+    if (process.env.DATABASE_URL) {
+      expect(config.connection).toBe(process.env.DATABASE_URL);
+    } else {
+      expect(typeof config.connection).toBe('object');
+    }
   });
   
   it('should have migration directories for all environments', () => {

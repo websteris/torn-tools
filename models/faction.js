@@ -170,15 +170,15 @@ async function deleteFaction(id) {
  */
 async function upsertFaction(factionData) {
   try {
-    // Check if faction exists
-    const existingFaction = await getFactionById(factionData.id);
-    
+    // Call siblings via module.exports so they can be stubbed/spied in tests.
+    const existingFaction = await module.exports.getFactionById(factionData.id);
+
     if (existingFaction) {
       // Update existing faction
-      return await updateFaction(factionData.id, factionData);
+      return await module.exports.updateFaction(factionData.id, factionData);
     } else {
       // Create new faction
-      return await createFaction(factionData);
+      return await module.exports.createFaction(factionData);
     }
   } catch (error) {
     logger.error(`Error upserting faction: ${error.message}`);

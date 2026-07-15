@@ -66,10 +66,9 @@ async function registerUser(userData) {
  */
 async function loginUser(credentials) {
   try {
-    // Find user by username
-    const users = await userAccountModel.getAllUsers();
-    const user = users.find(u => u.username === credentials.username);
-    
+    // Find user by username (indexed lookup rather than scanning all users)
+    const user = await userAccountModel.getUserAccountByUsername(credentials.username);
+
     if (!user) {
       throw new Error('Invalid credentials');
     }

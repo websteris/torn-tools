@@ -45,7 +45,9 @@ jest.mock('../../../../utils/logger', () => ({
 
 // Mock the user model
 jest.mock('../../../../models/userAccount', () => ({
+  getAllUsers: jest.fn(),
   getUserAccountById: jest.fn(),
+  getUserAccountByUsername: jest.fn(),
   createUserAccount: jest.fn(),
   updateUserAccount: jest.fn(),
   upsertUserAccount: jest.fn()

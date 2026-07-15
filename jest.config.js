@@ -4,6 +4,10 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/*.test.js'],
+  // Integration tests require a live database / network / real API key and are
+  // NOT run by the default `npm test` (and therefore CI). Run them explicitly
+  // with `npm run test:integration` in an environment that provides those.
+  testPathIgnorePatterns: ['/node_modules/', '.*\\.integration\\.test\\.js$'],
   collectCoverageFrom: [
     '**/*.js',
     '!**/node_modules/**',

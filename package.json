@@ -29,7 +29,6 @@
     "jsonwebtoken": "^9.0.2",
     "knex": "^3.2.9",
     "node-cache": "^5.1.2",
-    "node-fetch": "^2.7.0",
     "pg": "^8.22.0",
     "winston": "^3.13.0",
     "zod": "^4.4.3"

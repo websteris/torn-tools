@@ -20,13 +20,19 @@ describe('API: unparsed request body -> 400 (never 500) [#28 e2e]', () => {
     test(`POST ${url} with no Content-Type -> 400`, async () => {
       const res = await request(app).post(url).send(); // no body, no content-type
       expect(res.status).toBe(400);
-      expect(res.body).toEqual({ error: 'malformed or missing request body' });
+      expect(res.body).toEqual({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'malformed or missing request body' },
+      });
     });
 
     test(`POST ${url} with text/plain -> 400`, async () => {
       const res = await request(app).post(url).set('Content-Type', 'text/plain').send('hello');
       expect(res.status).toBe(400);
-      expect(res.body).toEqual({ error: 'malformed or missing request body' });
+      expect(res.body).toEqual({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'malformed or missing request body' },
+      });
     });
 
     test(`POST ${url} with valid JSON is NOT a body-guard 400/500`, async () => {

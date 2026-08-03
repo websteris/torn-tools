@@ -37,6 +37,11 @@ describe('a browser-marked cross-site state-changing request is blocked', () => 
     const res = await request(app).delete('/api/keys/5')
       .set('Cookie', COOKIE).set('Origin', EVIL_ORIGIN);
     expect(res.status).toBe(403);
+    // The 403 leaves in the app's single error envelope (#40).
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'FORBIDDEN', message: 'Cross-site request blocked' },
+    });
     expect(apiKeyModel.delete).not.toHaveBeenCalled(); // blocked before the handler
   });
 

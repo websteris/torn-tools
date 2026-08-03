@@ -6,25 +6,21 @@
 const express = require('express');
 const router = express.Router();
 const apiKeyModel = require('../db/models/api-key');
-const { logger } = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { schemas } = require('./schemas');
+const { notFound, validationError } = require('../middleware/errors');
 
 /**
  * Get all API keys for the authenticated user
  * GET /api/keys
  */
-router.get('/', authenticate, async (req, res) => {
+router.get('/', authenticate, async (req, res, next) => {
   try {
     const keys = await apiKeyModel.findByUserId(req.userId);
     res.json({ success: true, keys });
   } catch (error) {
-    logger.error(`Error getting API keys: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve API keys'
-    });
+    return next(error);
   }
 });
 
@@ -32,24 +28,17 @@ router.get('/', authenticate, async (req, res) => {
  * Get an API key by ID
  * GET /api/keys/:id
  */
-router.get('/:id', authenticate, validate({ params: schemas.idParam }), async (req, res) => {
+router.get('/:id', authenticate, validate({ params: schemas.idParam }), async (req, res, next) => {
   try {
     const key = await apiKeyModel.findById(req.params.id, req.userId);
     
     if (!key) {
-      return res.status(404).json({
-        success: false,
-        message: 'API key not found'
-      });
+      return next(notFound('API key not found'));
     }
     
     res.json({ success: true, key });
   } catch (error) {
-    logger.error(`Error getting API key: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to retrieve API key'
-    });
+    return next(error);
   }
 });
 
@@ -57,7 +46,7 @@ router.get('/:id', authenticate, validate({ params: schemas.idParam }), async (r
  * Create a new API key
  * POST /api/keys
  */
-router.post('/', authenticate, validate({ body: schemas.apiKeyCreateBody }), async (req, res) => {
+router.post('/', authenticate, validate({ body: schemas.apiKeyCreateBody }), async (req, res, next) => {
   try {
     const { key_name, key_value, active } = req.body;
 
@@ -70,11 +59,7 @@ router.post('/', authenticate, validate({ body: schemas.apiKeyCreateBody }), asy
     
     res.status(201).json({ success: true, key: newKey });
   } catch (error) {
-    logger.error(`Error creating API key: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to create API key'
-    });
+    return next(error);
   }
 });
 
@@ -82,16 +67,13 @@ router.post('/', authenticate, validate({ body: schemas.apiKeyCreateBody }), asy
  * Update an API key
  * PUT /api/keys/:id
  */
-router.put('/:id', authenticate, validate({ params: schemas.idParam, body: schemas.apiKeyUpdateBody }), async (req, res) => {
+router.put('/:id', authenticate, validate({ params: schemas.idParam, body: schemas.apiKeyUpdateBody }), async (req, res, next) => {
   try {
     const { key_name, key_value, active } = req.body;
     
     // At least one field must be provided
     if (!key_name && key_value === undefined && active === undefined) {
-      return res.status(400).json({
-        success: false,
-        message: 'At least one field to update is required'
-      });
+      return next(validationError('At least one field to update is required'));
     }
     
     const updatedKey = await apiKeyModel.update(
@@ -102,21 +84,12 @@ router.put('/:id', authenticate, validate({ params: schemas.idParam, body: schem
     
     res.json({ success: true, key: updatedKey });
   } catch (error) {
-    logger.error(`Error updating API key: ${error.message}`);
-    
     // Not-found is signalled by a typed error code from the model, not by
     // matching the message prose (which also names the internal user id).
     if (error.code === 'NOT_FOUND') {
-      return res.status(404).json({
-        success: false,
-        message: 'API key not found'
-      });
+      return next(notFound('API key not found'));
     }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to update API key'
-    });
+    return next(error);
   }
 });
 
@@ -124,7 +97,7 @@ router.put('/:id', authenticate, validate({ params: schemas.idParam, body: schem
  * Delete an API key
  * DELETE /api/keys/:id
  */
-router.delete('/:id', authenticate, validate({ params: schemas.idParam }), async (req, res) => {
+router.delete('/:id', authenticate, validate({ params: schemas.idParam }), async (req, res, next) => {
   try {
     await apiKeyModel.delete(req.params.id, req.userId);
     res.json({ 
@@ -132,21 +105,10 @@ router.delete('/:id', authenticate, validate({ params: schemas.idParam }), async
       message: 'API key deleted successfully' 
     });
   } catch (error) {
-    logger.error(`Error deleting API key: ${error.message}`);
-    
-    // Not-found is signalled by a typed error code from the model, not by
-    // matching the message prose (which also names the internal user id).
     if (error.code === 'NOT_FOUND') {
-      return res.status(404).json({
-        success: false,
-        message: 'API key not found'
-      });
+      return next(notFound('API key not found'));
     }
-    
-    res.status(500).json({
-      success: false,
-      message: 'Failed to delete API key'
-    });
+    return next(error);
   }
 });
 
@@ -154,7 +116,7 @@ router.delete('/:id', authenticate, validate({ params: schemas.idParam }), async
  * Verify an API key (check if it works with Torn API)
  * POST /api/keys/:id/verify
  */
-router.post('/:id/verify', authenticate, validate({ params: schemas.idParam }), async (req, res) => {
+router.post('/:id/verify', authenticate, validate({ params: schemas.idParam }), async (req, res, next) => {
   try {
     // Get the API key value
     const keyValue = await apiKeyModel.getKeyValue(req.params.id, req.userId);
@@ -190,11 +152,7 @@ router.post('/:id/verify', authenticate, validate({ params: schemas.idParam }), 
       throw apiError;
     }
   } catch (error) {
-    logger.error(`Error verifying API key: ${error.message}`);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to verify API key'
-    });
+    return next(error);
   }
 });
 

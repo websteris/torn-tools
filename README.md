@@ -83,14 +83,34 @@ URL-encoded). A request whose body can't be parsed — missing/unsupported
 body. See `middleware/require-parsed-body.js`.
 
 ### Error responses
-Error responses use `{ "success": false, "message": "<summary>" }`. On a **5xx**,
-`message` is a fixed generic summary and the body **never** carries the raw
-internal error detail (DB/crypto text) — the underlying error is logged
-server-side only, not returned to the client. A missing resource returns
-**`404 { "success": false, "message": "..." }`**; not-found is signalled by a
-typed error `code` from the model layer, not by matching error-message prose.
-(A single machine-readable error envelope with stable `code`s across every route
-is tracked in issue #40; this documents the current no-leak contract.)
+Every error — from a route, a middleware, the 404 handler, or an unexpected
+throw — is returned in **one** envelope, so clients branch on a stable
+machine-readable `code` rather than on prose:
+
+```json
+{ "success": false, "error": { "code": "VALIDATION_ERROR", "message": "factionId: expected a positive integer", "field": "factionId" } }
+```
+
+`field` is present only for `VALIDATION_ERROR`. Successful responses use
+`{ "success": true, ... }`.
+
+| `code`             | HTTP | When |
+|--------------------|------|------|
+| `VALIDATION_ERROR` | 400  | Bad/missing body, params, or query (incl. an unparsable body). |
+| `UNAUTHENTICATED`  | 401  | Missing/invalid session, or bad login credentials. |
+| `FORBIDDEN`        | 403  | Authenticated but not allowed (e.g. cross-site request). |
+| `NOT_FOUND`        | 404  | No such resource or route. |
+| `RATE_LIMITED`     | 429  | Inbound rate limit exceeded. |
+| `TORN_API_ERROR`   | 502  | Upstream Torn API failure (sanitised). |
+| `INTERNAL`         | 500  | Unexpected server error. |
+
+On a **5xx** the `message` is a fixed generic string and the body **never**
+carries the raw internal error detail (DB/crypto text) — the underlying error is
+logged server-side only. Not-found is signalled by a typed error `code` from the
+model/handler layer, never by matching error-message prose. Handlers and
+middleware raise errors by `throw`ing / `next()`-ing an `AppError`
+(`middleware/errors.js`); the central `errorHandler` is the only place that
+writes an error body.
 
 ### CSRF protection
 Auth rides an httpOnly `session_token` cookie the browser attaches automatically,

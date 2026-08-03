@@ -7,7 +7,6 @@ const express = require('express');
 const router = express.Router();
 const dataService = require('../services/data/data-service');
 const { authenticate } = require('../middleware/auth');
-const { logger } = require('../utils/logger');
 const { validate } = require('../middleware/validate');
 const { schemas } = require('./schemas');
 
@@ -15,7 +14,7 @@ const { schemas } = require('./schemas');
  * Get user data
  * GET /api/data/user
  */
-router.get('/user', authenticate, validate({ query: schemas.dataQuery }), async (req, res) => {
+router.get('/user', authenticate, validate({ query: schemas.dataQuery }), async (req, res, next) => {
   try {
     const userId = req.user.id;
     const tornId = req.user.torn_id;
@@ -32,12 +31,7 @@ router.get('/user', authenticate, validate({ query: schemas.dataQuery }), async 
       data: userData
     });
   } catch (error) {
-    logger.error(`Error fetching user data: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching user data'
-    });
+    return next(error);
   }
 });
 
@@ -45,7 +39,7 @@ router.get('/user', authenticate, validate({ query: schemas.dataQuery }), async 
  * Get faction data
  * GET /api/data/faction/:factionId
  */
-router.get('/faction/:factionId', authenticate, validate({ params: schemas.factionIdParam, query: schemas.dataQuery }), async (req, res) => {
+router.get('/faction/:factionId', authenticate, validate({ params: schemas.factionIdParam, query: schemas.dataQuery }), async (req, res, next) => {
   try {
     const userId = req.user.id;
     const factionId = req.params.factionId;
@@ -65,12 +59,7 @@ router.get('/faction/:factionId', authenticate, validate({ params: schemas.facti
       data: factionData
     });
   } catch (error) {
-    logger.error(`Error fetching faction data: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching faction data'
-    });
+    return next(error);
   }
 });
 
@@ -78,7 +67,7 @@ router.get('/faction/:factionId', authenticate, validate({ params: schemas.facti
  * Get Torn data
  * GET /api/data/torn
  */
-router.get('/torn', authenticate, validate({ query: schemas.dataQuery }), async (req, res) => {
+router.get('/torn', authenticate, validate({ query: schemas.dataQuery }), async (req, res, next) => {
   try {
     const userId = req.user.id;
     const selections = req.query.selections 
@@ -97,12 +86,7 @@ router.get('/torn', authenticate, validate({ query: schemas.dataQuery }), async 
       data: tornData
     });
   } catch (error) {
-    logger.error(`Error fetching Torn data: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: 'Error fetching Torn data'
-    });
+    return next(error);
   }
 });
 

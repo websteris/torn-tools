@@ -5,6 +5,7 @@
 
 const authService = require('../services/auth/auth-service');
 const { logger } = require('../utils/logger');
+const { unauthenticated } = require('./errors');
 
 /**
  * Middleware to authenticate requests
@@ -17,10 +18,7 @@ async function authenticate(req, res, next) {
   const sessionToken = req.cookies?.session_token;
 
   if (!sessionToken) {
-    return res.status(401).json({
-      success: false,
-      message: 'Authentication required'
-    });
+    return next(unauthenticated('Authentication required'));
   }
 
   let user;
@@ -32,10 +30,7 @@ async function authenticate(req, res, next) {
     // An invalid/expired token is a 401, not a server error — clear the stale
     // cookie so the client re-authenticates.
     res.clearCookie('session_token');
-    return res.status(401).json({
-      success: false,
-      message: 'Invalid or expired session'
-    });
+    return next(unauthenticated('Invalid or expired session'));
   }
 
   // Identity comes from the validated token — never hard-coded. Expose both

@@ -37,7 +37,9 @@ beforeEach(() => {
 function assertNoLeak(res, sensitive) {
   expect(res.status).toBe(500);
   expect(res.body.success).toBe(false);
-  expect(res.body.error).toBeUndefined();          // the leaking field is gone
+  // The envelope carries a code + a GENERIC message — never the raw cause.
+  expect(res.body.error.code).toBe('INTERNAL');
+  expect(res.body.error.message).toBe('Internal server error');
   expect(JSON.stringify(res.body)).not.toContain(sensitive);
 }
 
@@ -46,7 +48,7 @@ describe('api-keys: a forced DB failure does not leak internals on 5xx', () => {
     apiKeyModel.findByUserId.mockRejectedValue(new Error(SECRET_INTERNALS));
     const res = await request(app).get('/api/keys').set('Cookie', COOKIE);
     assertNoLeak(res, SECRET_INTERNALS);
-    expect(res.body.message).toBe('Failed to retrieve API keys');
+    expect(res.body.error.code).toBe('INTERNAL');
   });
 
   test('POST /api/keys', async () => {
@@ -71,7 +73,7 @@ describe('api-keys: not-found flows through a typed code, not string-matching', 
     const res = await request(app).put('/api/keys/5').set('Cookie', COOKIE)
       .send({ active: true });
     expect(res.status).toBe(404);
-    expect(res.body.message).toBe('API key not found');
+    expect(res.body.error.message).toBe('API key not found');
     expect(JSON.stringify(res.body)).not.toContain('for user'); // no internal id leak
   });
 
@@ -81,7 +83,7 @@ describe('api-keys: not-found flows through a typed code, not string-matching', 
     apiKeyModel.delete.mockRejectedValue(err);
     const res = await request(app).delete('/api/keys/5').set('Cookie', COOKIE);
     expect(res.status).toBe(404);
-    expect(res.body.message).toBe('API key not found');
+    expect(res.body.error.message).toBe('API key not found');
   });
 
   test('a genuine DB error (no NOT_FOUND code) still 500s, not 404', async () => {
@@ -95,7 +97,6 @@ describe('data: a forced service failure does not leak internals on 5xx', () => 
   test('GET /api/data/user', async () => {
     dataService.getUserData.mockRejectedValue(new Error(SECRET_INTERNALS));
     const res = await request(app).get('/api/data/user').set('Cookie', COOKIE);
-    assertNoLeak(res, SECRET_INTERNALS);
-    expect(res.body.message).toBe('Error fetching user data');
+    assertNoLeak(res, SECRET_INTERNALS); // one envelope: 500 INTERNAL, generic message
   });
 });

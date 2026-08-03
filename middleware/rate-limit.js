@@ -32,10 +32,10 @@ function make(limit) {
     limit,
     standardHeaders: true, // emit RateLimit-* headers
     legacyHeaders: false,
-    // Match the app's JSON error envelope.
+    // Match the app's single JSON error envelope (#40): { success, error{code,message} }.
     handler: (req, res) => res.status(429).json({
-      status: 'error',
-      message: 'Too many requests — slow down and try again later.',
+      success: false,
+      error: { code: 'RATE_LIMITED', message: 'Too many requests — slow down and try again later.' },
     }),
   });
 }

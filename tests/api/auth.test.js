@@ -36,11 +36,26 @@ describe('API: POST /api/auth/login', () => {
     expect(authService.loginUser).not.toHaveBeenCalled();
   });
 
-  test('bad credentials (service rejects) -> 401', async () => {
-    authService.loginUser.mockRejectedValue(new Error('Invalid credentials'));
+  test('bad credentials (service rejects with typed code) -> 401 UNAUTHENTICATED', async () => {
+    authService.loginUser.mockRejectedValue(
+      Object.assign(new Error('Invalid credentials'), { code: 'INVALID_CREDENTIALS' }));
     const res = await request(app).post('/api/auth/login').send({ username: 'neo', password: 'x' });
     expect(res.status).toBe(401);
-    expect(res.body.success).toBe(false);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'UNAUTHENTICATED', message: 'Invalid credentials' },
+    });
+  });
+
+  test('an UNEXPECTED service failure -> generic 500, error.message never leaks (CWE-209)', async () => {
+    authService.loginUser.mockRejectedValue(new Error('SQLITE_ERROR: no such table: user_accounts'));
+    const res = await request(app).post('/api/auth/login').send({ username: 'neo', password: 'x' });
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'INTERNAL', message: 'Internal server error' },
+    });
+    expect(JSON.stringify(res.body)).not.toContain('SQLITE');
   });
 });
 
@@ -57,6 +72,30 @@ describe('API: POST /api/auth/register', () => {
     const res = await request(app).post('/api/auth/register').send({ name: 'x' });
     expect(res.status).toBe(400);
     expect(authService.registerUser).not.toHaveBeenCalled();
+  });
+
+  test('duplicate user (typed USER_EXISTS) -> 400 VALIDATION_ERROR with a fixed message', async () => {
+    authService.registerUser.mockRejectedValue(
+      Object.assign(new Error('User already exists'), { code: 'USER_EXISTS' }));
+    const res = await request(app).post('/api/auth/register')
+      .send({ username: 'trin', password: 'pw', player_id: 7, name: 'Trinity' });
+    expect(res.status).toBe(400);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'User already exists' },
+    });
+  });
+
+  test('an UNEXPECTED service failure -> generic 500, error.message never leaks (CWE-209)', async () => {
+    authService.registerUser.mockRejectedValue(new Error('bcrypt: /etc/secret-pepper unreadable'));
+    const res = await request(app).post('/api/auth/register')
+      .send({ username: 'trin', password: 'pw', player_id: 7, name: 'Trinity' });
+    expect(res.status).toBe(500);
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'INTERNAL', message: 'Internal server error' },
+    });
+    expect(JSON.stringify(res.body)).not.toContain('bcrypt');
   });
 });
 

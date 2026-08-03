@@ -23,19 +23,20 @@
  * after the routers and BEFORE the generic error handler so parse failures get
  * the same uniform 400.
  */
+const { validationError } = require('./errors');
 const BODY_METHODS = new Set(['POST', 'PUT', 'PATCH']);
-const BODY_ERROR = { error: 'malformed or missing request body' };
+const BODY_ERROR_MESSAGE = 'malformed or missing request body';
 
 function requireParsedBody(req, res, next) {
   if (BODY_METHODS.has(req.method) && req.body === undefined) {
-    return res.status(400).json(BODY_ERROR);
+    return next(validationError(BODY_ERROR_MESSAGE));
   }
   return next();
 }
 
 function bodyParseErrorHandler(err, req, res, next) {
   if (err && err.type === 'entity.parse.failed') {
-    return res.status(400).json(BODY_ERROR);
+    return next(validationError(BODY_ERROR_MESSAGE));
   }
   return next(err);
 }

@@ -43,8 +43,8 @@ beforeEach(() => {
 
 function expect400Field(res) {
   expect(res.status).toBe(400);
-  expect(res.body).toMatchObject({ status: 'error' });
-  expect(typeof res.body.field).toBe('string');
+  expect(res.body).toMatchObject({ success: false, error: { code: 'VALIDATION_ERROR' } });
+  expect(typeof res.body.error.field).toBe('string');
 }
 
 describe('validation: faction-tracker', () => {
@@ -52,7 +52,7 @@ describe('validation: faction-tracker', () => {
     const res = await request(app).post('/api/faction-tracker/track').set('Cookie', COOKIE)
       .send({ factionId: 'abc' });
     expect400Field(res);
-    expect(res.body.field).toBe('factionId');
+    expect(res.body.error.field).toBe('factionId');
     expect(tracker.trackFaction).not.toHaveBeenCalled();
   });
 
@@ -68,13 +68,13 @@ describe('validation: faction-tracker', () => {
   test('non-integer :factionId -> 400', async () => {
     const res = await request(app).get('/api/faction-tracker/faction/abc').set('Cookie', COOKIE);
     expect400Field(res);
-    expect(res.body.field).toBe('factionId');
+    expect(res.body.error.field).toBe('factionId');
   });
 
   test('unknown :warType -> 400', async () => {
     const res = await request(app).get('/api/faction-tracker/war/12/bogus').set('Cookie', COOKIE);
     expect400Field(res);
-    expect(res.body.field).toBe('warType');
+    expect(res.body.error.field).toBe('warType');
   });
 
   test('a VALID /track passes validation and reaches the service', async () => {
@@ -90,7 +90,7 @@ describe('validation: data selections allowlist', () => {
   test('an unknown selection -> 400, getUserData not called', async () => {
     const res = await request(app).get('/api/data/user?selections=evilselection').set('Cookie', COOKIE);
     expect400Field(res);
-    expect(res.body.field).toBe('selections');
+    expect(res.body.error.field).toBe('selections');
     expect(dataService.getUserData).not.toHaveBeenCalled();
   });
 
@@ -112,7 +112,7 @@ describe('validation: api-keys', () => {
     const res = await request(app).post('/api/keys').set('Cookie', COOKIE)
       .send({ key_name: 'k', key_value: 'too-short' });
     expect400Field(res);
-    expect(res.body.field).toBe('key_value');
+    expect(res.body.error.field).toBe('key_value');
     expect(apiKeyModel.create).not.toHaveBeenCalled();
   });
 
@@ -120,7 +120,7 @@ describe('validation: api-keys', () => {
     const res = await request(app).put('/api/keys/5').set('Cookie', COOKIE)
       .send({ active: 'yes' });
     expect400Field(res);
-    expect(res.body.field).toBe('active');
+    expect(res.body.error.field).toBe('active');
   });
 });
 
@@ -128,6 +128,6 @@ describe('validation: auth', () => {
   test('login without a password -> 400 naming password', async () => {
     const res = await request(app).post('/api/auth/login').send({ username: 'neo' });
     expect400Field(res);
-    expect(res.body.field).toBe('password');
+    expect(res.body.error.field).toBe('password');
   });
 });

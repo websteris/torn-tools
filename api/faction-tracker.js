@@ -9,15 +9,15 @@ const factionTrackerService = require('../services/faction-tracker/faction-track
 const warTracker = require('../services/faction-tracker/war-tracker');
 const dataProcessor = require('../services/faction-tracker/data-processor');
 const { authenticate } = require('../middleware/auth');
-const { logger } = require('../utils/logger');
 const { validate } = require('../middleware/validate');
 const { schemas } = require('./schemas');
+const { notFound, validationError, internal } = require('../middleware/errors');
 
 /**
  * Get all tracked factions
  * GET /api/faction-tracker/factions
  */
-router.get('/factions', authenticate, async (req, res) => {
+router.get('/factions', authenticate, async (req, res, next) => {
   try {
     const trackedFactions = factionTrackerService.getTrackedFactions();
     
@@ -26,12 +26,7 @@ router.get('/factions', authenticate, async (req, res) => {
       factions: trackedFactions
     });
   } catch (error) {
-    logger.error(`Error getting tracked factions: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting tracked factions'
-    });
+    return next(error);
   }
 });
 
@@ -39,7 +34,7 @@ router.get('/factions', authenticate, async (req, res) => {
  * Start tracking a faction
  * POST /api/faction-tracker/track
  */
-router.post('/track', authenticate, validate({ body: schemas.trackBody }), async (req, res) => {
+router.post('/track', authenticate, validate({ body: schemas.trackBody }), async (req, res, next) => {
   try {
     const { factionId, targetFactionId, pollingInterval } = req.body;  // validated by schema
     const userId = req.user.id;
@@ -57,18 +52,10 @@ router.post('/track', authenticate, validate({ body: schemas.trackBody }), async
         message: `Now tracking faction ${factionId}`
       });
     } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to track faction'
-      });
+      return next(internal('Failed to track faction'));
     }
   } catch (error) {
-    logger.error(`Error tracking faction: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error tracking faction'
-    });
+    return next(error);
   }
 });
 
@@ -76,17 +63,10 @@ router.post('/track', authenticate, validate({ body: schemas.trackBody }), async
  * Stop tracking a faction
  * POST /api/faction-tracker/stop
  */
-router.post('/stop', authenticate, validate({ body: schemas.stopBody }), async (req, res) => {
+router.post('/stop', authenticate, validate({ body: schemas.stopBody }), async (req, res, next) => {
   try {
     const { factionId } = req.body;
     const userId = req.user.id;
-    
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
     
     const success = await factionTrackerService.stopTracking({
       factionId,
@@ -99,18 +79,10 @@ router.post('/stop', authenticate, validate({ body: schemas.stopBody }), async (
         message: `Stopped tracking faction ${factionId}`
       });
     } else {
-      res.status(500).json({
-        success: false,
-        message: 'Failed to stop tracking faction'
-      });
+      return next(internal('Failed to stop tracking faction'));
     }
   } catch (error) {
-    logger.error(`Error stopping faction tracking: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error stopping faction tracking'
-    });
+    return next(error);
   }
 });
 
@@ -118,24 +90,14 @@ router.post('/stop', authenticate, validate({ body: schemas.stopBody }), async (
  * Get faction data
  * GET /api/faction-tracker/faction/:factionId
  */
-router.get('/faction/:factionId', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
+router.get('/faction/:factionId', authenticate, validate({ params: schemas.factionIdParam }), async (req, res, next) => {
   try {
     const factionId = req.params.factionId;
-    
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
     
     const factionData = await dataProcessor.getLatestFactionData(factionId);
     
     if (!factionData) {
-      return res.status(404).json({
-        success: false,
-        message: `No data found for faction ${factionId}`
-      });
+      return next(notFound(`No data found for faction ${factionId}`));
     }
     
     res.json({
@@ -143,12 +105,7 @@ router.get('/faction/:factionId', authenticate, validate({ params: schemas.facti
       faction: factionData
     });
   } catch (error) {
-    logger.error(`Error getting faction data: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting faction data'
-    });
+    return next(error);
   }
 });
 
@@ -156,16 +113,9 @@ router.get('/faction/:factionId', authenticate, validate({ params: schemas.facti
  * Get faction members
  * GET /api/faction-tracker/faction/:factionId/members
  */
-router.get('/faction/:factionId/members', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
+router.get('/faction/:factionId/members', authenticate, validate({ params: schemas.factionIdParam }), async (req, res, next) => {
   try {
     const factionId = req.params.factionId;
-    
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
     
     const members = await dataProcessor.getLatestMembersData(factionId);
     
@@ -174,12 +124,7 @@ router.get('/faction/:factionId/members', authenticate, validate({ params: schem
       members
     });
   } catch (error) {
-    logger.error(`Error getting faction members: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting faction members'
-    });
+    return next(error);
   }
 });
 
@@ -187,16 +132,9 @@ router.get('/faction/:factionId/members', authenticate, validate({ params: schem
  * Get active wars for a faction
  * GET /api/faction-tracker/faction/:factionId/wars/active
  */
-router.get('/faction/:factionId/wars/active', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
+router.get('/faction/:factionId/wars/active', authenticate, validate({ params: schemas.factionIdParam }), async (req, res, next) => {
   try {
     const factionId = req.params.factionId;
-    
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
     
     const activeWars = await warTracker.getActiveWars(factionId);
     
@@ -205,12 +143,7 @@ router.get('/faction/:factionId/wars/active', authenticate, validate({ params: s
       wars: activeWars
     });
   } catch (error) {
-    logger.error(`Error getting active wars: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting active wars'
-    });
+    return next(error);
   }
 });
 
@@ -218,17 +151,10 @@ router.get('/faction/:factionId/wars/active', authenticate, validate({ params: s
  * Get war history for a faction
  * GET /api/faction-tracker/faction/:factionId/wars/history
  */
-router.get('/faction/:factionId/wars/history', authenticate, validate({ params: schemas.factionIdParam, query: schemas.historyQuery }), async (req, res) => {
+router.get('/faction/:factionId/wars/history', authenticate, validate({ params: schemas.factionIdParam, query: schemas.historyQuery }), async (req, res, next) => {
   try {
     const factionId = req.params.factionId;
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
-    
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
     
     const warHistory = await warTracker.getWarHistory(factionId, limit);
     
@@ -237,12 +163,7 @@ router.get('/faction/:factionId/wars/history', authenticate, validate({ params: 
       wars: warHistory
     });
   } catch (error) {
-    logger.error(`Error getting war history: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting war history'
-    });
+    return next(error);
   }
 });
 
@@ -250,25 +171,15 @@ router.get('/faction/:factionId/wars/history', authenticate, validate({ params: 
  * Get details for a specific war
  * GET /api/faction-tracker/war/:warId/:warType
  */
-router.get('/war/:warId/:warType', authenticate, validate({ params: schemas.warIdTypeParams }), async (req, res) => {
+router.get('/war/:warId/:warType', authenticate, validate({ params: schemas.warIdTypeParams }), async (req, res, next) => {
   try {
     const warId = req.params.warId;
     const warType = req.params.warType;
 
-    if (!warId || !warType) {
-      return res.status(400).json({
-        success: false,
-        message: 'War ID and war type are required'
-      });
-    }
-
     const warDetails = await warTracker.getWarDetails(warId, warType);
 
     if (!warDetails) {
-      return res.status(404).json({
-        success: false,
-        message: `No details found for war ${warId}`
-      });
+      return next(notFound(`No details found for war ${warId}`));
     }
 
     res.json({
@@ -276,12 +187,7 @@ router.get('/war/:warId/:warType', authenticate, validate({ params: schemas.warI
       war: warDetails
     });
   } catch (error) {
-    logger.error(`Error getting war details: ${error.message}`);
-
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting war details'
-    });
+    return next(error);
   }
 });
 
@@ -289,16 +195,9 @@ router.get('/war/:warId/:warType', authenticate, validate({ params: schemas.warI
  * Get factions currently at war with a faction
  * GET /api/faction-tracker/faction/:factionId/opponents
  */
-router.get('/faction/:factionId/opponents', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
+router.get('/faction/:factionId/opponents', authenticate, validate({ params: schemas.factionIdParam }), async (req, res, next) => {
   try {
     const factionId = req.params.factionId;
-
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
 
     const opponents = await warTracker.getWarOpponents(factionId);
 
@@ -307,12 +206,7 @@ router.get('/faction/:factionId/opponents', authenticate, validate({ params: sch
       opponents
     });
   } catch (error) {
-    logger.error(`Error getting war opponents: ${error.message}`);
-
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Error getting war opponents'
-    });
+    return next(error);
   }
 });
 

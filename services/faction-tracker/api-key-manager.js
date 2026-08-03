@@ -126,14 +126,33 @@ async function getApiKeyForUsers(userIds, excludeKeys = []) {
     const db = getConnection();
     
     return new Promise((resolve, reject) => {
-      // Convert array to comma-separated list for SQL IN clause
-      const userIdList = userIds.join(',');
-      
+      // Validate ids as positive integers before they reach SQL — a non-numeric
+      // element (a future caller, a compromised upstream, a bug) must never be
+      // spliced into the statement. Reject anything that isn't a clean integer
+      // (don't parseInt-coerce, so `1) OR 1=1 --` is dropped, not silently read
+      // as user 1); the survivors are bound as parameters below.
+      const toId = (id) => {
+        if (typeof id === 'number' && Number.isInteger(id)) return id;
+        if (typeof id === 'string' && /^\d+$/.test(id.trim())) return parseInt(id.trim(), 10);
+        return NaN;
+      };
+      const ids = userIds.map(toId).filter((id) => Number.isInteger(id) && id > 0);
+
+      if (ids.length === 0) {
+        db.close();
+        resolve(null);
+        return;
+      }
+
+      // Bind the ids as parameters (one '?' per id) rather than interpolating the
+      // list into the SQL text.
+      const placeholders = ids.map(() => '?').join(',');
+
       db.all(`
         SELECT id, user_id
         FROM api_keys
-        WHERE user_id IN (${userIdList}) AND active = 1
-      `, [], async (err, rows) => {
+        WHERE user_id IN (${placeholders}) AND active = 1
+      `, ids, async (err, rows) => {
         db.close();
         
         if (err) {

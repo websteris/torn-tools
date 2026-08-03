@@ -42,10 +42,11 @@ async function authenticate(req, res, next) {
   // shapes the routes use: req.userId (api-keys) and req.user (data/faction).
   req.userId = user.player_id;
   req.user = {
-    id: user.player_id,
-    username: user.username,
-    torn_id: user.torn_id,
     ...user,
+    id: user.player_id,
+    // user_accounts has no torn_id column — player_id IS the Torn player id.
+    // Fall back so consumers like api/data.js get a real id, not undefined.
+    torn_id: user.torn_id ?? user.player_id,
   };
   next();
 }

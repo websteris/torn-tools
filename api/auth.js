@@ -60,10 +60,13 @@ router.post('/login', async (req, res) => {
     const { token, user } = await authService.loginUser({ username, password });
 
     // The JWT is the session token; the auth middleware verifies it on protected
-    // routes. httpOnly so client JS can't read it.
+    // routes. httpOnly so client JS can't read it; sameSite=strict so cross-site
+    // requests can't ride the cookie (CSRF) — the app talks to the API via
+    // same-origin XHR only.
     res.cookie('session_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
       maxAge: 24 * 60 * 60 * 1000 // 24h — matches the JWT expiry
     });
 

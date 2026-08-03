@@ -83,4 +83,12 @@ describe('API: /api/keys is scoped to the authenticated user (#36)', () => {
     expect(res.status).toBe(500);
     expect(res.body.success).toBe(false);
   });
+
+  test('POST /api/keys authed with missing required fields -> 4xx (not 500)', async () => {
+    authAs(42);
+    const res = await request(app).post('/api/keys').set('Cookie', COOKIE).send({});
+    expect(res.status).toBeGreaterThanOrEqual(400);
+    expect(res.status).toBeLessThan(500);
+    expect(apiKeyModel.create).not.toHaveBeenCalled();
+  });
 });

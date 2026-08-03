@@ -41,6 +41,17 @@ describe('Module: AuthMiddleware', () => {
     expect(res.status).not.toHaveBeenCalled();
   });
 
+  test('account without a torn_id column -> torn_id falls back to player_id', async () => {
+    // user_accounts rows have no torn_id — player_id IS the Torn player id.
+    req.cookies.session_token = 'valid_token';
+    authService.verifyToken.mockResolvedValue({ player_id: 7, username: 'neo' });
+
+    await authenticate(req, res, next);
+
+    expect(req.user).toMatchObject({ id: 7, torn_id: 7 });
+    expect(next).toHaveBeenCalled();
+  });
+
   test('missing token -> 401, verifyToken not called', async () => {
     req.cookies = {};
 

@@ -251,25 +251,27 @@ class PollingService {
         const db = getConnection();
         
         db.all(`
-          SELECT u.id, u.username, u.torn_id, k.key_value
+          SELECT u.id, u.username, u.torn_id, k.id AS key_id, k.key_value
           FROM users u
           JOIN api_keys k ON u.id = k.user_id
           WHERE k.active = 1
           LIMIT 100
         `, [], async (err, rows) => {
           db.close();
-          
+
           if (err) {
             logger.error(`Error getting active users: ${err.message}`);
             reject(err);
             return;
           }
-          
-          // Decrypt API keys
+
+          // Decrypt API keys. getKeyValue(keyId, userId) matches on the api_keys
+          // ROW id, so pass row.key_id (not the user id) — otherwise every decrypt
+          // fails "API key not found" and the user is silently skipped (#55).
           const activeUsers = [];
           for (const row of rows) {
             try {
-              const apiKey = await apiKeyModel.getKeyValue(row.id, row.id);
+              const apiKey = await apiKeyModel.getKeyValue(row.key_id, row.id);
               activeUsers.push({
                 id: row.id,
                 username: row.username,
@@ -303,26 +305,33 @@ class PollingService {
       return new Promise((resolve, reject) => {
         const db = getConnection();
         
+        // One row per faction (GROUP BY faction_id), carrying one member's api-key
+        // row id + user id to decrypt with. The old DISTINCT (faction, key_value)
+        // returned a separate row per member key — duplicate factions — and never
+        // selected the ids getKeyValue needs. Any active member key can poll the
+        // faction, so an arbitrary one per faction is fine.
         db.all(`
-          SELECT DISTINCT u.faction_id, u.faction_name, k.key_value
+          SELECT u.faction_id, u.faction_name, u.id AS user_id, k.id AS key_id, k.key_value
           FROM users u
           JOIN api_keys k ON u.id = k.user_id
           WHERE u.faction_id IS NOT NULL AND k.active = 1
+          GROUP BY u.faction_id
           LIMIT 100
         `, [], async (err, rows) => {
           db.close();
-          
+
           if (err) {
             logger.error(`Error getting active factions: ${err.message}`);
             reject(err);
             return;
           }
-          
-          // Decrypt API keys
+
+          // Decrypt API keys. Pass the api_keys ROW id + its owner's user id (not
+          // the undefined row.id it used before, which always failed) (#55).
           const activeFactions = [];
           for (const row of rows) {
             try {
-              const apiKey = await apiKeyModel.getKeyValue(row.id, row.id);
+              const apiKey = await apiKeyModel.getKeyValue(row.key_id, row.user_id);
               activeFactions.push({
                 faction_id: row.faction_id,
                 faction_name: row.faction_name,

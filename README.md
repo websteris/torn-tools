@@ -92,6 +92,18 @@ typed error `code` from the model layer, not by matching error-message prose.
 (A single machine-readable error envelope with stable `code`s across every route
 is tracked in issue #40; this documents the current no-leak contract.)
 
+### CSRF protection
+Auth rides an httpOnly `session_token` cookie the browser attaches automatically,
+so state-changing `/api` requests (`POST`/`PUT`/`DELETE`) are verified to have
+originated from the app itself. The cookie is `sameSite: 'strict'`; on top of that,
+`middleware/csrf.js` checks the browser-set **`Sec-Fetch-Site`** header
+(`same-origin`/`none` pass, `same-site`/`cross-site` are rejected `403`) with an
+**`Origin`** allowlist fallback (`CORS_ORIGIN`). A request carrying **neither**
+header is a non-browser client (a CSRF attack always carries one), so it passes —
+server-to-server callers are unaffected. Because the check uses request metadata,
+**the web UI needs no CSRF token wiring**. Safe methods (`GET`/`HEAD`/`OPTIONS`)
+are never blocked.
+
 ### Running Tests
 - Run all tests:
   ```bash

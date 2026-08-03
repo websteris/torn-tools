@@ -36,7 +36,7 @@ router.get('/user', authenticate, validate({ query: schemas.dataQuery }), async 
     
     res.status(500).json({
       success: false,
-      message: error.message || 'Error fetching user data'
+      message: 'Error fetching user data'
     });
   }
 });
@@ -69,7 +69,7 @@ router.get('/faction/:factionId', authenticate, validate({ params: schemas.facti
     
     res.status(500).json({
       success: false,
-      message: error.message || 'Error fetching faction data'
+      message: 'Error fetching faction data'
     });
   }
 });
@@ -101,7 +101,7 @@ router.get('/torn', authenticate, validate({ query: schemas.dataQuery }), async 
     
     res.status(500).json({
       success: false,
-      message: error.message || 'Error fetching Torn data'
+      message: 'Error fetching Torn data'
     });
   }
 });

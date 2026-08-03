@@ -278,6 +278,7 @@ class ApiKeyModel {
               db.run('ROLLBACK');
               db.close();
               const error = new Error(`API key with ID ${id} not found for user ${userId}`);
+              error.code = 'NOT_FOUND'; // stable signal so routes needn't string-match the message
               logger.error(error.message);
               reject(error);
               return;
@@ -380,6 +381,7 @@ class ApiKeyModel {
           
           if (this.changes === 0) {
             const error = new Error(`API key with ID ${id} not found for user ${userId}`);
+            error.code = 'NOT_FOUND'; // stable signal so routes needn't string-match the message
             logger.error(error.message);
             reject(error);
             return;

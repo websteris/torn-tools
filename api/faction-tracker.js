@@ -10,6 +10,8 @@ const warTracker = require('../services/faction-tracker/war-tracker');
 const dataProcessor = require('../services/faction-tracker/data-processor');
 const { authenticate } = require('../middleware/auth');
 const { logger } = require('../utils/logger');
+const { validate } = require('../middleware/validate');
+const { schemas } = require('./schemas');
 
 /**
  * Get all tracked factions
@@ -37,17 +39,10 @@ router.get('/factions', authenticate, async (req, res) => {
  * Start tracking a faction
  * POST /api/faction-tracker/track
  */
-router.post('/track', authenticate, async (req, res) => {
+router.post('/track', authenticate, validate({ body: schemas.trackBody }), async (req, res) => {
   try {
-    const { factionId, targetFactionId, pollingInterval } = req.body;
+    const { factionId, targetFactionId, pollingInterval } = req.body;  // validated by schema
     const userId = req.user.id;
-    
-    if (!factionId) {
-      return res.status(400).json({
-        success: false,
-        message: 'Faction ID is required'
-      });
-    }
     
     const success = await factionTrackerService.trackFaction({
       factionId,
@@ -81,7 +76,7 @@ router.post('/track', authenticate, async (req, res) => {
  * Stop tracking a faction
  * POST /api/faction-tracker/stop
  */
-router.post('/stop', authenticate, async (req, res) => {
+router.post('/stop', authenticate, validate({ body: schemas.stopBody }), async (req, res) => {
   try {
     const { factionId } = req.body;
     const userId = req.user.id;
@@ -123,7 +118,7 @@ router.post('/stop', authenticate, async (req, res) => {
  * Get faction data
  * GET /api/faction-tracker/faction/:factionId
  */
-router.get('/faction/:factionId', authenticate, async (req, res) => {
+router.get('/faction/:factionId', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
   try {
     const factionId = req.params.factionId;
     
@@ -161,7 +156,7 @@ router.get('/faction/:factionId', authenticate, async (req, res) => {
  * Get faction members
  * GET /api/faction-tracker/faction/:factionId/members
  */
-router.get('/faction/:factionId/members', authenticate, async (req, res) => {
+router.get('/faction/:factionId/members', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
   try {
     const factionId = req.params.factionId;
     
@@ -192,7 +187,7 @@ router.get('/faction/:factionId/members', authenticate, async (req, res) => {
  * Get active wars for a faction
  * GET /api/faction-tracker/faction/:factionId/wars/active
  */
-router.get('/faction/:factionId/wars/active', authenticate, async (req, res) => {
+router.get('/faction/:factionId/wars/active', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
   try {
     const factionId = req.params.factionId;
     
@@ -223,7 +218,7 @@ router.get('/faction/:factionId/wars/active', authenticate, async (req, res) => 
  * Get war history for a faction
  * GET /api/faction-tracker/faction/:factionId/wars/history
  */
-router.get('/faction/:factionId/wars/history', authenticate, async (req, res) => {
+router.get('/faction/:factionId/wars/history', authenticate, validate({ params: schemas.factionIdParam, query: schemas.historyQuery }), async (req, res) => {
   try {
     const factionId = req.params.factionId;
     const limit = req.query.limit ? parseInt(req.query.limit) : 10;
@@ -255,7 +250,7 @@ router.get('/faction/:factionId/wars/history', authenticate, async (req, res) =>
  * Get details for a specific war
  * GET /api/faction-tracker/war/:warId/:warType
  */
-router.get('/war/:warId/:warType', authenticate, async (req, res) => {
+router.get('/war/:warId/:warType', authenticate, validate({ params: schemas.warIdTypeParams }), async (req, res) => {
   try {
     const warId = req.params.warId;
     const warType = req.params.warType;
@@ -294,7 +289,7 @@ router.get('/war/:warId/:warType', authenticate, async (req, res) => {
  * Get factions currently at war with a faction
  * GET /api/faction-tracker/faction/:factionId/opponents
  */
-router.get('/faction/:factionId/opponents', authenticate, async (req, res) => {
+router.get('/faction/:factionId/opponents', authenticate, validate({ params: schemas.factionIdParam }), async (req, res) => {
   try {
     const factionId = req.params.factionId;
 

@@ -13,6 +13,15 @@ const JWT_SECRET = process.env.JWT_SECRET || 'torn-dashboard-secret-key';
 const JWT_EXPIRATION = '24h';
 const SALT_ROUNDS = 10;
 
+// Expected auth failure, marked with a typed code (same pattern as the model
+// layer's NOT_FOUND) so routes never branch on — or echo — message prose.
+// Deliberately identical for unknown-user and wrong-password (no user enumeration).
+function invalidCredentials() {
+  const err = new Error('Invalid credentials');
+  err.code = 'INVALID_CREDENTIALS';
+  return err;
+}
+
 /**
  * Register a new user
  * @param {Object} userData - User data
@@ -29,7 +38,12 @@ async function registerUser(userData) {
     // Check if user already exists
     const existingUser = await userAccountModel.getUserAccountById(userData.player_id);
     if (existingUser) {
-      throw new Error('User already exists');
+      // Typed code so the route can distinguish this EXPECTED failure from an
+      // unexpected DB/bcrypt error without matching message prose (see #40/#50:
+      // unexpected errors must 500 generically, never echo error.message).
+      const err = new Error('User already exists');
+      err.code = 'USER_EXISTS';
+      throw err;
     }
     
     // Hash the password
@@ -70,13 +84,13 @@ async function loginUser(credentials) {
     const user = await userAccountModel.getUserAccountByUsername(credentials.username);
 
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw invalidCredentials();
     }
-    
+
     // Verify password
     const isPasswordValid = await bcrypt.compare(credentials.password, user.password_hash);
     if (!isPasswordValid) {
-      throw new Error('Invalid credentials');
+      throw invalidCredentials();
     }
     
     // Generate JWT token

@@ -30,7 +30,13 @@ router.post('/register', validate({ body: schemas.registerBody }), async (req, r
     });
   } catch (error) {
     logger.error(`Registration error: ${error.message}`);
-    return next(validationError(error.message || 'Registration failed'));
+    // Only the EXPECTED, typed failure surfaces as a 400 with a fixed message.
+    // Anything else (DB/bcrypt/...) flows to the central handler as a generic
+    // 500 — never echo error.message to the client (CWE-209, #40/#50).
+    if (error.code === 'USER_EXISTS') {
+      return next(validationError('User already exists'));
+    }
+    return next(error);
   }
 });
 
@@ -62,7 +68,13 @@ router.post('/login', validate({ body: schemas.loginBody }), async (req, res, ne
     });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
-    return next(unauthenticated(error.message || 'Authentication failed'));
+    // Bad credentials (typed by the service) -> 401 with a fixed message; an
+    // unexpected DB/bcrypt/jwt failure -> generic 500 via the central handler,
+    // never a 401 echoing error.message (CWE-209, #40/#50).
+    if (error.code === 'INVALID_CREDENTIALS') {
+      return next(unauthenticated('Invalid credentials'));
+    }
+    return next(error);
   }
 });
 

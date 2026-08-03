@@ -16,6 +16,8 @@
 //     a request with neither is a non-browser/API client, not a CSRF vector — allowed
 //     (this keeps server-to-server callers and existing tests working).
 
+const { forbidden } = require('./errors');
+
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS']);
 
 // Origins the app itself is served from — same source as the CORS config so the
@@ -25,8 +27,10 @@ function allowedOrigins() {
   return raw.split(',').map((o) => o.trim()).filter(Boolean);
 }
 
-function blocked(res) {
-  return res.status(403).json({ success: false, message: 'Cross-site request blocked' });
+// Rejections flow through the central errorHandler (#40) so the 403 leaves in
+// the single { success:false, error:{ code:'FORBIDDEN', message } } envelope.
+function blocked(next) {
+  return next(forbidden('Cross-site request blocked'));
 }
 
 function verifyCsrf(req, res, next) {
@@ -34,12 +38,12 @@ function verifyCsrf(req, res, next) {
 
   const site = req.get('sec-fetch-site');
   if (site) {
-    return (site === 'same-origin' || site === 'none') ? next() : blocked(res);
+    return (site === 'same-origin' || site === 'none') ? next() : blocked(next);
   }
 
   const origin = req.get('origin');
   if (origin) {
-    return allowedOrigins().includes(origin) ? next() : blocked(res);
+    return allowedOrigins().includes(origin) ? next() : blocked(next);
   }
 
   // No browser-set cross-site signal → not a forgeable CSRF request.

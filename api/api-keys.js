@@ -21,8 +21,7 @@ router.get('/', authenticate, async (req, res) => {
     logger.error(`Error getting API keys: ${error.message}`);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve API keys',
-      error: error.message
+      message: 'Failed to retrieve API keys'
     });
   }
 });
@@ -47,8 +46,7 @@ router.get('/:id', authenticate, async (req, res) => {
     logger.error(`Error getting API key: ${error.message}`);
     res.status(500).json({
       success: false,
-      message: 'Failed to retrieve API key',
-      error: error.message
+      message: 'Failed to retrieve API key'
     });
   }
 });
@@ -80,8 +78,7 @@ router.post('/', authenticate, async (req, res) => {
     logger.error(`Error creating API key: ${error.message}`);
     res.status(500).json({
       success: false,
-      message: 'Failed to create API key',
-      error: error.message
+      message: 'Failed to create API key'
     });
   }
 });
@@ -112,18 +109,18 @@ router.put('/:id', authenticate, async (req, res) => {
   } catch (error) {
     logger.error(`Error updating API key: ${error.message}`);
     
-    // Handle not found errors
-    if (error.message.includes('not found')) {
+    // Not-found is signalled by a typed error code from the model, not by
+    // matching the message prose (which also names the internal user id).
+    if (error.code === 'NOT_FOUND') {
       return res.status(404).json({
         success: false,
-        message: error.message
+        message: 'API key not found'
       });
     }
     
     res.status(500).json({
       success: false,
-      message: 'Failed to update API key',
-      error: error.message
+      message: 'Failed to update API key'
     });
   }
 });
@@ -142,18 +139,18 @@ router.delete('/:id', authenticate, async (req, res) => {
   } catch (error) {
     logger.error(`Error deleting API key: ${error.message}`);
     
-    // Handle not found errors
-    if (error.message.includes('not found')) {
+    // Not-found is signalled by a typed error code from the model, not by
+    // matching the message prose (which also names the internal user id).
+    if (error.code === 'NOT_FOUND') {
       return res.status(404).json({
         success: false,
-        message: error.message
+        message: 'API key not found'
       });
     }
     
     res.status(500).json({
       success: false,
-      message: 'Failed to delete API key',
-      error: error.message
+      message: 'Failed to delete API key'
     });
   }
 });
@@ -201,8 +198,7 @@ router.post('/:id/verify', authenticate, async (req, res) => {
     logger.error(`Error verifying API key: ${error.message}`);
     res.status(500).json({
       success: false,
-      message: 'Failed to verify API key',
-      error: error.message
+      message: 'Failed to verify API key'
     });
   }
 });

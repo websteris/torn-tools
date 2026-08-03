@@ -82,6 +82,16 @@ URL-encoded). A request whose body can't be parsed — missing/unsupported
 (we do not split 400 vs 415 on `Content-Type`), so no route 500s on an unparsed
 body. See `middleware/require-parsed-body.js`.
 
+### Error responses
+Error responses use `{ "success": false, "message": "<summary>" }`. On a **5xx**,
+`message` is a fixed generic summary and the body **never** carries the raw
+internal error detail (DB/crypto text) — the underlying error is logged
+server-side only, not returned to the client. A missing resource returns
+**`404 { "success": false, "message": "..." }`**; not-found is signalled by a
+typed error `code` from the model layer, not by matching error-message prose.
+(A single machine-readable error envelope with stable `code`s across every route
+is tracked in issue #40; this documents the current no-leak contract.)
+
 ### Running Tests
 - Run all tests:
   ```bash

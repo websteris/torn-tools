@@ -256,7 +256,7 @@ describe('Auth Service', () => {
       const result = await authService.verifyToken(token);
       
       // Verify jwt.verify was called with the correct arguments
-      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String));
+      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String), { algorithms: ['HS256'] });
       
       // Verify the model was called
       expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(12345);
@@ -280,7 +280,7 @@ describe('Auth Service', () => {
       await expect(authService.verifyToken(token)).rejects.toThrow('Invalid token');
       
       // Verify jwt.verify was called
-      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String));
+      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String), { algorithms: ['HS256'] });
       expect(userAccountModel.getUserAccountById).not.toHaveBeenCalled();
     });
     
@@ -298,7 +298,7 @@ describe('Auth Service', () => {
       await expect(authService.verifyToken(token)).rejects.toThrow('User not found');
       
       // Verify jwt.verify was called
-      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String));
+      expect(jwt.verify).toHaveBeenCalledWith(token, expect.any(String), { algorithms: ['HS256'] });
       expect(userAccountModel.getUserAccountById).toHaveBeenCalledWith(12345);
     });
   });

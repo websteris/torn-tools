@@ -7,9 +7,13 @@ const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 const userAccountModel = require('../../models/userAccount');
 const logger = require('../../utils/logger').logger;
+const { requireSecret } = require('../../utils/secret');
 
-// JWT secret key - should be in environment variables in production
-const JWT_SECRET = process.env.JWT_SECRET || 'torn-dashboard-secret-key';
+// JWT signing key. Required from the environment; in production a missing value
+// is fatal rather than silently falling back to a committed (public) default,
+// which would let anyone forge a valid token. See utils/secret.js.
+const JWT_SECRET = requireSecret('JWT_SECRET');
+const JWT_ALGORITHM = 'HS256'; // jwt.sign default; pin on verify to reject alg confusion
 const JWT_EXPIRATION = '24h';
 const SALT_ROUNDS = 10;
 
@@ -83,7 +87,7 @@ async function loginUser(credentials) {
     const token = jwt.sign(
       { player_id: user.player_id },
       JWT_SECRET,
-      { expiresIn: JWT_EXPIRATION }
+      { expiresIn: JWT_EXPIRATION, algorithm: JWT_ALGORITHM }
     );
     
     // Remove sensitive data before returning
@@ -108,8 +112,9 @@ async function loginUser(credentials) {
  */
 async function verifyToken(token) {
   try {
-    // Verify token
-    const decoded = jwt.verify(token, JWT_SECRET);
+    // Verify token — pin the algorithm so a token is only accepted if signed
+    // with our HMAC secret (rejects `alg: none` and algorithm-confusion tokens).
+    const decoded = jwt.verify(token, JWT_SECRET, { algorithms: [JWT_ALGORITHM] });
     
     // Get user data
     const user = await userAccountModel.getUserAccountById(decoded.player_id);

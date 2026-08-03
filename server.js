@@ -36,6 +36,14 @@ app.use(cookieParser()); // Parse cookies
 // after the parsers, before the routers. See middleware/require-parsed-body.js.
 app.use(requireParsedBody);
 
+// Inbound rate limiting (there was none). Strict on the unauthenticated
+// credential + Torn-API-proxy endpoints; moderate on the rest of /api (which
+// includes the Torn-API-fanout data / keys-verify / faction-tracker routes).
+// Mounted before the routers so a flood is rejected without reaching a handler.
+const { strictLimiter, generalLimiter } = require('./middleware/rate-limit');
+app.use(['/api/auth/login', '/api/auth/register', '/api/test'], strictLimiter);
+app.use('/api', generalLimiter);
+
 // Basic health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is running' });

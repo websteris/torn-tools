@@ -33,7 +33,9 @@ These services run in the background when the server is started and do not requi
 ## Setup Instructions
 
 ### Prerequisites
-- Node.js and npm installed
+- Node.js **>= 20.17.0** and npm (declared in `package.json` `engines`; sqlite3@6
+  sets the floor). We deliberately do not set `engine-strict` — npm warns rather
+  than fails on an older Node, and CI (20.x/22.x) is the enforcement gate.
 - PostgreSQL for production environment
 
 ### Installation
@@ -297,7 +299,7 @@ body. See `middleware/require-parsed-body.js`.
 
 1. **Server Requirements**:
    - Ubuntu 20.04 LTS or newer
-   - Node.js 16.x or newer
+   - Node.js 20.17 or newer (see `engines` in package.json)
    - PostgreSQL 13 or newer
    - Nginx for reverse proxy
 
@@ -307,7 +309,7 @@ body. See `middleware/require-parsed-body.js`.
    sudo apt update && sudo apt upgrade -y
    
    # Install Node.js and npm
-   curl -fsSL https://deb.nodesource.com/setup_16.x | sudo -E bash -
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
    sudo apt install -y nodejs
    
    # Install PostgreSQL

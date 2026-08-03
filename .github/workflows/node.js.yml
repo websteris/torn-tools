@@ -16,8 +16,10 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [18.x, 20.x, 22.x]
-        # See supported Node.js release schedule at https://nodejs.org/en/about/releases/
+        # sqlite3@6 requires node >=20.17.0, so 18.x is an unsupported config.
+        # 20.x/22.x both resolve to a release above that floor (see package.json
+        # engines). Node 18 is EOL. See https://nodejs.org/en/about/releases/
+        node-version: [20.x, 22.x]
 
     steps:
     - uses: actions/checkout@v7

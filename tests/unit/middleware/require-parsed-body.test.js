@@ -11,7 +11,10 @@
  */
 const http = require('http');
 const express = require('express');
-const requireParsedBody = require('../../../middleware/require-parsed-body');
+const {
+  requireParsedBody,
+  bodyParseErrorHandler,
+} = require('../../../middleware/require-parsed-body');
 
 function makeApp() {
   const app = express();
@@ -22,6 +25,11 @@ function makeApp() {
     const { value } = req.body; // direct destructure — the pattern that used to 500
     res.status(200).json({ value: value === undefined ? null : value });
   });
+  app.post('/boom', () => {
+    throw new Error('unrelated handler error'); // must still be a 500
+  });
+  // Mirror server.js's error chain: parse-failure handler first, then catch-all.
+  app.use(bodyParseErrorHandler);
   // eslint-disable-next-line no-unused-vars
   app.use((err, req, res, next) => res.status(500).json({ error: 'server error' }));
   return app;
@@ -88,11 +96,34 @@ describe('Middleware: requireParsedBody (express 5 undefined body -> 400 not 500
     expect(r.status).toBe(200);
   });
 
+  test('POST malformed JSON WITH Content-Type: application/json -> 400 (not 500)', async () => {
+    // body-parser throws entity.parse.failed (status 400) before requireParsedBody
+    // can run; bodyParseErrorHandler must convert it, not the catch-all 500.
+    const r = await request({
+      port,
+      headers: { 'Content-Type': 'application/json' },
+      body: '{bad json',
+    });
+    expect(r.status).toBe(400);
+    expect(JSON.parse(r.body)).toEqual({ error: 'malformed or missing request body' });
+  });
+
+  test('non-body errors still reach the generic 500 handler', async () => {
+    const r = await request({
+      port,
+      path: '/boom',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}',
+    });
+    expect(r.status).toBe(500);
+  });
+
   test('no malformed-body case ever returns 500', async () => {
     const cases = [
       { headers: {}, body: 'x' },
       { headers: { 'Content-Type': 'text/plain' }, body: 'x' },
       { headers: {} },
+      { headers: { 'Content-Type': 'application/json' }, body: '{bad json' },
     ];
     for (const c of cases) {
       const r = await request({ port, ...c });

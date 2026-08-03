@@ -13,7 +13,7 @@ const { logger } = require('./utils/logger');
 // Uncomment services
 const pollingService = require('./services/polling/polling-service');
 const factionTrackerService = require('./services/faction-tracker/faction-tracker-service');
-const requireParsedBody = require('./middleware/require-parsed-body');
+const { requireParsedBody, bodyParseErrorHandler } = require('./middleware/require-parsed-body');
 
 // Initialize Express app
 const app = express();
@@ -50,6 +50,11 @@ try {
 } catch (error) {
   console.error('Error loading API routes:', error);
 }
+
+// Body-parser failures (e.g. malformed JSON sent with Content-Type:
+// application/json throw before requireParsedBody can run) -> uniform 400,
+// not a 500 from the generic handler below. See middleware/require-parsed-body.js.
+app.use(bodyParseErrorHandler);
 
 // Error handling middleware
 app.use((err, req, res, next) => {

@@ -1,10 +1,10 @@
-// userDetail model imports '../db/db', so mock that exact path (not '../db').
-const db = require('../../../db/db');
+// userDetail model imports the canonical '../db' (db.js), so mock that exact path.
+const db = require('../../../db');
 const userDetailModel = require('../../../models/userDetail');
 
 // The db module is a knex instance: it is called as a function — db('table') —
 // and returns a chainable query builder. The mock must be callable, not a plain object.
-jest.mock('../../../db/db', () => {
+jest.mock('../../../db', () => {
   const db = jest.fn(() => db);
   db.where = jest.fn().mockReturnThis();
   db.select = jest.fn().mockReturnThis();

@@ -29,6 +29,12 @@ app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(cookieParser()); // Parse cookies
 
+// Guard unparsed bodies (express 5 leaves req.body undefined on malformed POSTs):
+// respond 400 instead of letting api/ handlers destructure undefined and 500.
+// Mounted after the parsers and before the routers so every /api route is covered.
+const { requireParsedBody } = require('./middleware/require-parsed-body');
+app.use(requireParsedBody);
+
 // Basic health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is running' });

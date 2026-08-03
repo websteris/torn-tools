@@ -72,6 +72,13 @@ These services run in the background when the server is started and do not requi
   npm start
   ```
 
+### API request bodies
+Body-carrying requests (`POST`/`PUT`/`PATCH`) must send a parseable body (JSON or
+URL-encoded). A request whose body can't be parsed is rejected with **`400 {"error":
+"malformed or missing request body"}`** — a single convention (we do not split 400
+vs 415 on `Content-Type`) — so no route 500s on an unparsed body. See
+`middleware/require-parsed-body.js`.
+
 ### Running Tests
 - Run all tests:
   ```bash

@@ -165,12 +165,37 @@ class TornApiClient {
    * @returns {string} Formatted URL
    */
   _buildUrl(section, id, selections = []) {
-    let url = `/${section}/${id}`;
-    
-    if (selections && selections.length > 0) {
-      url += `?selections=${selections.join(',')}`;
+    // SSRF hardening (CodeQL alert 18, js/request-forgery). section/id/selections
+    // can reach here unvalidated (e.g. from the polling service), and axios treats
+    // an absolute value like `https://evil/` as a full URL — bypassing baseURL and
+    // sending the request (with the key) to another host; `../` rewrites the path.
+    // encodeURIComponent each segment so a tainted value stays an inert path/query
+    // token and can't inject a host, a path segment, or extra query params.
+    const path = `/${encodeURIComponent(String(section))}/${encodeURIComponent(String(id))}`;
+
+    // Defense-in-depth: resolve against the fixed base and refuse anything whose
+    // origin isn't ours. An empty section yields a protocol-relative `//...` that
+    // on the old code resolved to an attacker host — here it's an encoded, invalid
+    // authority that new URL() rejects, which we surface as a clean refusal.
+    let resolved;
+    try {
+      resolved = new URL(path, this.baseUrl);
+    } catch (err) {
+      throw new Error('Refusing to build a Torn API URL from invalid section/id');
     }
-    
+    if (resolved.origin !== new URL(this.baseUrl).origin) {
+      throw new Error('Refusing to build a Torn API URL that targets a different origin');
+    }
+
+    // Base-relative return (path + query) so axios still resolves against baseURL
+    // and existing cache keys stay stable. Comma-separate as Torn expects, but
+    // encode each selection so it can't smuggle `&`/`#` into the query.
+    let url = resolved.pathname;
+    if (selections && selections.length > 0) {
+      const encoded = selections.map((s) => encodeURIComponent(String(s))).join(',');
+      url += `?selections=${encoded}`;
+    }
+
     return url;
   }
 

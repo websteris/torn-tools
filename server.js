@@ -13,6 +13,7 @@ const { logger } = require('./utils/logger');
 // Uncomment services
 const pollingService = require('./services/polling/polling-service');
 const factionTrackerService = require('./services/faction-tracker/faction-tracker-service');
+const requireParsedBody = require('./middleware/require-parsed-body');
 
 // Initialize Express app
 const app = express();
@@ -28,6 +29,12 @@ app.use(compression()); // Response compression
 app.use(express.json()); // Parse JSON bodies
 app.use(express.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(cookieParser()); // Parse cookies
+
+// Reject a POST/PUT/PATCH whose body couldn't be parsed. Express 5 leaves
+// req.body `undefined` (no matching parser / no body); handlers destructure it
+// directly, so this returns a 400 instead of letting them throw a 500. Mounted
+// after the parsers, before the routers. See middleware/require-parsed-body.js.
+app.use(requireParsedBody);
 
 // Basic health check endpoint
 app.get('/health', (req, res) => {

@@ -9,7 +9,6 @@ const NodeCache = require('node-cache');
 const { promisify } = require('util');
 const { logger } = require('../../utils/logger');
 const config = require('../../config/api-config');
-const fetch = require('node-fetch');
 
 /**
  * TornApiClient class to handle all API interactions with rate limiting and caching
@@ -361,18 +360,26 @@ const getApiKey = () => {
  * @param {Array<string>} [selections] - Optional selections to request
  * @returns {Promise<Object>} User data
  */
+// A shared hardened client so the standalone helpers get _buildUrl's origin +
+// per-segment encoding checks (the SSRF fix from #48/#51), plus its rate limiting
+// and caching — instead of the old raw `https://api.torn.com/...${id}` fetch that
+// bypassed all of it (#56). Lazily created; the signatures below are unchanged so
+// data-puller's apiKey-first callers keep working.
+let _sharedClient = null;
+function _client() {
+  if (!_sharedClient) {
+    _sharedClient = new TornApiClient();
+  }
+  return _sharedClient;
+}
+
 async function getUserData(apiKey = getApiKey(), selections = []) {
-  const selectionsParam = selections.length > 0 ? `&selections=${selections.join(',')}` : '';
-  const url = `https://api.torn.com/user/?key=${apiKey}${selectionsParam}`;
-  
-  const response = await fetch(url);
-  const data = await response.json();
-  
-  // Check for API errors
-  if (data.error) {
+  const data = await _client().getUserData(apiKey, selections);
+  // Torn returns application errors as a 200 with an { error } body; preserve the
+  // helpers' original throw-on-error contract that callers rely on.
+  if (data && data.error) {
     throw new Error(`API Error: ${data.error.error}`);
   }
-  
   return data;
 }
 
@@ -382,13 +389,10 @@ async function getUserData(apiKey = getApiKey(), selections = []) {
  * @returns {Promise<Array>} War opponents
  */
 async function getWarOpponents(apiKey = getApiKey()) {
-  const url = `https://api.torn.com/faction/?key=${apiKey}&selections=rankedwars`;
-  
-  const response = await fetch(url);
-  const data = await response.json();
-  
-  // Check for API errors
-  if (data.error) {
+  // faction/?selections=rankedwars, via the hardened client (no id).
+  const data = await _client().getFactionData(apiKey, '', ['rankedwars']);
+
+  if (data && data.error) {
     throw new Error(`API Error: ${data.error.error}`);
   }
 
@@ -397,7 +401,7 @@ async function getWarOpponents(apiKey = getApiKey()) {
   if (Array.isArray(data)) {
     return data;
   }
-  return data.ranked_wars ? Object.values(data.ranked_wars) : [];
+  return data && data.ranked_wars ? Object.values(data.ranked_wars) : [];
 }
 
 /**
@@ -408,13 +412,9 @@ async function getWarOpponents(apiKey = getApiKey()) {
  * @returns {Promise<Object>} Faction data
  */
 async function getFactionData(apiKey = getApiKey(), factionId = '', selections = []) {
-  const selectionsParam = selections.length > 0 ? `&selections=${selections.join(',')}` : '';
-  const url = `https://api.torn.com/faction/${factionId}?key=${apiKey}${selectionsParam}`;
+  const data = await _client().getFactionData(apiKey, factionId, selections);
 
-  const response = await fetch(url);
-  const data = await response.json();
-
-  if (data.error) {
+  if (data && data.error) {
     throw new Error(`API Error: ${data.error.error}`);
   }
 

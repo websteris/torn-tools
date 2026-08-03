@@ -8,12 +8,14 @@ const router = express.Router();
 const dataService = require('../services/data/data-service');
 const { authenticate } = require('../middleware/auth');
 const { logger } = require('../utils/logger');
+const { validate } = require('../middleware/validate');
+const { schemas } = require('./schemas');
 
 /**
  * Get user data
  * GET /api/data/user
  */
-router.get('/user', authenticate, async (req, res) => {
+router.get('/user', authenticate, validate({ query: schemas.dataQuery }), async (req, res) => {
   try {
     const userId = req.user.id;
     const tornId = req.user.torn_id;
@@ -43,7 +45,7 @@ router.get('/user', authenticate, async (req, res) => {
  * Get faction data
  * GET /api/data/faction/:factionId
  */
-router.get('/faction/:factionId', authenticate, async (req, res) => {
+router.get('/faction/:factionId', authenticate, validate({ params: schemas.factionIdParam, query: schemas.dataQuery }), async (req, res) => {
   try {
     const userId = req.user.id;
     const factionId = req.params.factionId;
@@ -76,7 +78,7 @@ router.get('/faction/:factionId', authenticate, async (req, res) => {
  * Get Torn data
  * GET /api/data/torn
  */
-router.get('/torn', authenticate, async (req, res) => {
+router.get('/torn', authenticate, validate({ query: schemas.dataQuery }), async (req, res) => {
   try {
     const userId = req.user.id;
     const selections = req.query.selections 

@@ -14,6 +14,7 @@ const { logger } = require('./utils/logger');
 const pollingService = require('./services/polling/polling-service');
 const factionTrackerService = require('./services/faction-tracker/faction-tracker-service');
 const { requireParsedBody, bodyParseErrorHandler } = require('./middleware/require-parsed-body');
+const { errorHandler } = require('./middleware/errors');
 
 // Initialize Express app
 const app = express();
@@ -64,15 +65,11 @@ try {
 // not a 500 from the generic handler below. See middleware/require-parsed-body.js.
 app.use(bodyParseErrorHandler);
 
-// Error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Server error:', err);
-  logger.error(`Unhandled error: ${err.message}`, { stack: err.stack });
-  res.status(500).json({
-    status: 'error',
-    message: 'An unexpected error occurred'
-  });
-});
+// Central error handler (#40): every error — thrown/next()'d from a route or
+// middleware, or an unexpected throw — leaves as the single { success:false,
+// error:{ code, message } } envelope, with 5xx internals logged not leaked.
+// Mounted last, after the routers and bodyParseErrorHandler.
+app.use(errorHandler);
 
 // Start the server
 if (process.env.NODE_ENV !== 'test') {

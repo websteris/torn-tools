@@ -32,8 +32,8 @@ describe('API: strict inbound rate limiting (#37)', () => {
     // The third trips the limiter.
     const limited = res[2];
     expect(limited.status).toBe(429);
-    expect(limited.body).toMatchObject({ status: 'error' });
-    expect(limited.body.message).toMatch(/too many requests/i);
+    expect(limited.body).toMatchObject({ success: false, error: { code: 'RATE_LIMITED' } });
+    expect(limited.body.error.message).toMatch(/too many requests/i);
     // Standard RateLimit-* headers are present.
     expect(limited.headers).toHaveProperty('ratelimit-limit');
     expect(limited.headers).toHaveProperty('ratelimit-remaining');

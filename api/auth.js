@@ -10,12 +10,13 @@ const { logger } = require('../utils/logger');
 const { authenticate } = require('../middleware/auth');
 const { validate } = require('../middleware/validate');
 const { schemas } = require('./schemas');
+const { validationError, unauthenticated } = require('../middleware/errors');
 
 /**
  * Register a new user with Torn API key
  * POST /api/auth/register
  */
-router.post('/register', validate({ body: schemas.registerBody }), async (req, res) => {
+router.post('/register', validate({ body: schemas.registerBody }), async (req, res, next) => {
   try {
     const { player_id, name, username, password, preferences } = req.body;
 
@@ -29,11 +30,7 @@ router.post('/register', validate({ body: schemas.registerBody }), async (req, r
     });
   } catch (error) {
     logger.error(`Registration error: ${error.message}`);
-
-    res.status(400).json({
-      success: false,
-      message: error.message || 'Registration failed'
-    });
+    return next(validationError(error.message || 'Registration failed'));
   }
 });
 
@@ -41,7 +38,7 @@ router.post('/register', validate({ body: schemas.registerBody }), async (req, r
  * Login with Torn API key
  * POST /api/auth/login
  */
-router.post('/login', validate({ body: schemas.loginBody }), async (req, res) => {
+router.post('/login', validate({ body: schemas.loginBody }), async (req, res, next) => {
   try {
     const { username, password } = req.body;
 
@@ -65,11 +62,7 @@ router.post('/login', validate({ body: schemas.loginBody }), async (req, res) =>
     });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
-
-    res.status(401).json({
-      success: false,
-      message: error.message || 'Authentication failed'
-    });
+    return next(unauthenticated(error.message || 'Authentication failed'));
   }
 });
 

@@ -12,6 +12,7 @@ const testRoutes = require('./test');
 const dataRoutes = require('./data');
 // Uncomment the faction tracker routes
 const factionTrackerRoutes = require('./faction-tracker');
+const { notFoundHandler } = require('../middleware/errors');
 
 // API metadata endpoint
 router.get('/', (req, res) => {
@@ -51,12 +52,7 @@ router.use('/data', dataRoutes);
 // Re-enable faction tracker routes
 router.use('/faction-tracker', factionTrackerRoutes);
 
-// 404 handler for API routes
-router.use((req, res) => {
-  res.status(404).json({
-    status: 'error',
-    message: `API endpoint not found: ${req.method} ${req.originalUrl}`
-  });
-});
+// 404 handler for API routes — funnels through the central error envelope (#40).
+router.use(notFoundHandler);
 
 module.exports = router;

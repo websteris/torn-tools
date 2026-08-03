@@ -15,6 +15,7 @@ const {
   requireParsedBody,
   bodyParseErrorHandler,
 } = require('../../../middleware/require-parsed-body');
+const { errorHandler } = require('../../../middleware/errors');
 
 function makeApp() {
   const app = express();
@@ -28,10 +29,11 @@ function makeApp() {
   app.post('/boom', () => {
     throw new Error('unrelated handler error'); // must still be a 500
   });
-  // Mirror server.js's error chain: parse-failure handler first, then catch-all.
+  // Mirror server.js's error chain: parse-failure handler first, then the central
+  // errorHandler (#40) which emits the single { success:false, error:{code,message} }
+  // envelope and 500s on any other thrown error.
   app.use(bodyParseErrorHandler);
-  // eslint-disable-next-line no-unused-vars
-  app.use((err, req, res, next) => res.status(500).json({ error: 'server error' }));
+  app.use(errorHandler);
   return app;
 }
 
@@ -105,7 +107,10 @@ describe('Middleware: requireParsedBody (express 5 undefined body -> 400 not 500
       body: '{bad json',
     });
     expect(r.status).toBe(400);
-    expect(JSON.parse(r.body)).toEqual({ error: 'malformed or missing request body' });
+    expect(JSON.parse(r.body)).toEqual({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'malformed or missing request body' },
+    });
   });
 
   test('non-body errors still reach the generic 500 handler', async () => {

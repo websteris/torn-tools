@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const TornApiClient = require('../services/torn-api/client');
 const { logger } = require('../utils/logger');
+const { validationError } = require('../middleware/errors');
 
 const apiClient = new TornApiClient();
 
@@ -14,17 +15,14 @@ const apiClient = new TornApiClient();
  * Test Torn API connectivity with provided key
  * GET /api/test/torn-api
  */
-router.get('/torn-api', async (req, res) => {
+router.get('/torn-api', async (req, res, next) => {
   try {
     const apiKey = req.query.key;
-    
+
     if (!apiKey) {
-      return res.status(400).json({
-        success: false,
-        message: 'API key is required'
-      });
+      return next(validationError('API key is required'));
     }
-    
+
     logger.info('Testing Torn API connectivity');
     const userData = await apiClient.getUserData(apiKey, ['profile', 'personalstats']);
     
@@ -40,12 +38,7 @@ router.get('/torn-api', async (req, res) => {
       }
     });
   } catch (error) {
-    logger.error(`Torn API test error: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Torn API test failed'
-    });
+    return next(error);
   }
 });
 

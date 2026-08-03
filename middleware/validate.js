@@ -6,11 +6,13 @@
 // the field, and never reaches the service layer.
 //
 // `validate({ params, body, query })` — each is an optional zod schema. On the
-// first failure it responds 400 with the app's error envelope; otherwise next().
+// first failure it forwards a VALIDATION_ERROR to the central error handler (#40),
+// which emits the single { success:false, error:{ code, message, field } } envelope.
 // Note: we validate in place and don't reassign req.query (a read-only getter in
 // express 5) — handlers keep reading the (now-validated) values.
 
 const { z } = require('zod');
+const { validationError } = require('./errors');
 
 function validate(schemas) {
   return (req, res, next) => {
@@ -21,11 +23,7 @@ function validate(schemas) {
       if (!result.success) {
         const issue = result.error.issues[0];
         const field = issue.path.length ? issue.path.join('.') : key;
-        return res.status(400).json({
-          status: 'error',
-          message: `${field}: ${issue.message}`,
-          field,
-        });
+        return next(validationError(`${field}: ${issue.message}`, field));
       }
     }
     return next();

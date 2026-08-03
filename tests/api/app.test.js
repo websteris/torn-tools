@@ -29,8 +29,8 @@ describe('API: app-level contract', () => {
     const res = await request(app).get('/api/does-not-exist');
     expect(res.status).toBe(404);
     expect(res.headers['content-type']).toMatch(/application\/json/);
-    expect(res.body.status).toBe('error');
-    expect(res.body.message).toMatch(/not found/i);
+    expect(res.body.error.code).toBe('NOT_FOUND');
+    expect(res.body.error.message).toMatch(/not found/i);
   });
 
   test('malformed JSON body -> 400 (parse-error handler), no stack/error leak', async () => {
@@ -43,7 +43,10 @@ describe('API: app-level contract', () => {
       .set('Content-Type', 'application/json')
       .send('{ this is not json');
     expect(res.status).toBe(400);
-    expect(res.body).toEqual({ error: 'malformed or missing request body' });
+    expect(res.body).toEqual({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'malformed or missing request body' },
+    });
     const serialized = JSON.stringify(res.body);
     expect(serialized).not.toMatch(/stack/i);
     expect(serialized).not.toMatch(/SyntaxError/);

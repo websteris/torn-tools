@@ -58,12 +58,11 @@ describe('Module: AuthMiddleware', () => {
     await authenticate(req, res, next);
 
     expect(authService.verifyToken).not.toHaveBeenCalled();
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      message: 'Authentication required'
-    });
-    expect(next).not.toHaveBeenCalled();
+    // Auth failures now flow to the central error handler via next(AppError) (#40).
+    expect(res.status).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+    const err = next.mock.calls[0][0];
+    expect(err).toMatchObject({ code: 'UNAUTHENTICATED', status: 401, message: 'Authentication required' });
   });
 
   test('invalid/expired token -> 401 and clears the cookie (not a 500)', async () => {
@@ -76,11 +75,9 @@ describe('Module: AuthMiddleware', () => {
 
     expect(authService.verifyToken).toHaveBeenCalledWith('invalid_token');
     expect(res.clearCookie).toHaveBeenCalledWith('session_token');
-    expect(res.status).toHaveBeenCalledWith(401);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      message: 'Invalid or expired session'
-    });
-    expect(next).not.toHaveBeenCalled();
+    expect(res.status).not.toHaveBeenCalled();
+    expect(next).toHaveBeenCalledTimes(1);
+    const err = next.mock.calls[0][0];
+    expect(err).toMatchObject({ code: 'UNAUTHENTICATED', status: 401, message: 'Invalid or expired session' });
   });
 });

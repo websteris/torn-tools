@@ -5,63 +5,59 @@
 const { authenticate } = require('../../../middleware/auth');
 const authService = require('../../../services/auth/auth-service');
 
-// Mock the auth service
+// Mock the auth service — the middleware now validates the JWT via verifyToken (#36).
 jest.mock('../../../services/auth/auth-service', () => ({
-  validateSession: jest.fn()
+  verifyToken: jest.fn()
 }));
 
-// Mock the logger
 jest.mock('../../../utils/logger', () => ({
-  logger: {
-    error: jest.fn()
-  }
+  logger: { error: jest.fn() }
 }));
 
 describe('Module: AuthMiddleware', () => {
   let req, res, next;
-  
+
   beforeEach(() => {
-    // Reset mocks
     jest.clearAllMocks();
-    
-    // Mock request, response, and next function
-    req = {
-      cookies: {}
-    };
-    
+    req = { cookies: {} };
     res = {
       status: jest.fn().mockReturnThis(),
       json: jest.fn(),
       clearCookie: jest.fn()
     };
-    
     next = jest.fn();
   });
-  
-  test('should call next() when session token is valid', async () => {
-    // Arrange
+
+  test('valid token -> next(), identity from the token (never hard-coded)', async () => {
     req.cookies.session_token = 'valid_token';
-    authService.validateSession.mockResolvedValue(true);
-    
-    // Act
+    authService.verifyToken.mockResolvedValue({ player_id: 7, username: 'neo', torn_id: 42 });
+
     await authenticate(req, res, next);
-    
-    // Assert
-    expect(authService.validateSession).toHaveBeenCalledWith('valid_token');
-    expect(req.user).toBeDefined();
+
+    expect(authService.verifyToken).toHaveBeenCalledWith('valid_token');
+    expect(req.userId).toBe(7);          // from the token, not the old req.userId=1
+    expect(req.user).toMatchObject({ id: 7, username: 'neo', torn_id: 42 });
     expect(next).toHaveBeenCalled();
     expect(res.status).not.toHaveBeenCalled();
   });
-  
-  test('should return 401 when session token is missing', async () => {
-    // Arrange
-    req.cookies = {}; // No session token
-    
-    // Act
+
+  test('account without a torn_id column -> torn_id falls back to player_id', async () => {
+    // user_accounts rows have no torn_id — player_id IS the Torn player id.
+    req.cookies.session_token = 'valid_token';
+    authService.verifyToken.mockResolvedValue({ player_id: 7, username: 'neo' });
+
     await authenticate(req, res, next);
-    
-    // Assert
-    expect(authService.validateSession).not.toHaveBeenCalled();
+
+    expect(req.user).toMatchObject({ id: 7, torn_id: 7 });
+    expect(next).toHaveBeenCalled();
+  });
+
+  test('missing token -> 401, verifyToken not called', async () => {
+    req.cookies = {};
+
+    await authenticate(req, res, next);
+
+    expect(authService.verifyToken).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
@@ -69,40 +65,21 @@ describe('Module: AuthMiddleware', () => {
     });
     expect(next).not.toHaveBeenCalled();
   });
-  
-  test('should return 401 and clear cookie when session token is invalid', async () => {
-    // Arrange
+
+  test('invalid/expired token -> 401 and clears the cookie (not a 500)', async () => {
+    // verifyToken throws on a bad signature / expiry / missing user. That's a
+    // client problem -> 401, not a server error.
     req.cookies.session_token = 'invalid_token';
-    authService.validateSession.mockResolvedValue(false);
-    
-    // Act
+    authService.verifyToken.mockRejectedValue(new Error('jwt expired'));
+
     await authenticate(req, res, next);
-    
-    // Assert
-    expect(authService.validateSession).toHaveBeenCalledWith('invalid_token');
+
+    expect(authService.verifyToken).toHaveBeenCalledWith('invalid_token');
     expect(res.clearCookie).toHaveBeenCalledWith('session_token');
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
       success: false,
       message: 'Invalid or expired session'
-    });
-    expect(next).not.toHaveBeenCalled();
-  });
-  
-  test('should return 500 when an error occurs', async () => {
-    // Arrange
-    req.cookies.session_token = 'token';
-    authService.validateSession.mockRejectedValue(new Error('Test error'));
-    
-    // Act
-    await authenticate(req, res, next);
-    
-    // Assert
-    expect(authService.validateSession).toHaveBeenCalledWith('token');
-    expect(res.status).toHaveBeenCalledWith(500);
-    expect(res.json).toHaveBeenCalledWith({
-      success: false,
-      message: 'Internal server error'
     });
     expect(next).not.toHaveBeenCalled();
   });

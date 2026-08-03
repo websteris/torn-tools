@@ -7,21 +7,13 @@ const express = require('express');
 const router = express.Router();
 const apiKeyModel = require('../db/models/api-key');
 const { logger } = require('../utils/logger');
-
-// Middleware to check authentication
-// This is a placeholder - you'll need to implement proper authentication
-const authenticateUser = (req, res, next) => {
-  // For now, we'll just set a placeholder user ID
-  // In a real application, this would come from your authentication system
-  req.userId = 1; // Placeholder user ID
-  next();
-};
+const { authenticate } = require('../middleware/auth');
 
 /**
  * Get all API keys for the authenticated user
  * GET /api/keys
  */
-router.get('/', authenticateUser, async (req, res) => {
+router.get('/', authenticate, async (req, res) => {
   try {
     const keys = await apiKeyModel.findByUserId(req.userId);
     res.json({ success: true, keys });
@@ -39,7 +31,7 @@ router.get('/', authenticateUser, async (req, res) => {
  * Get an API key by ID
  * GET /api/keys/:id
  */
-router.get('/:id', authenticateUser, async (req, res) => {
+router.get('/:id', authenticate, async (req, res) => {
   try {
     const key = await apiKeyModel.findById(req.params.id, req.userId);
     
@@ -65,7 +57,7 @@ router.get('/:id', authenticateUser, async (req, res) => {
  * Create a new API key
  * POST /api/keys
  */
-router.post('/', authenticateUser, async (req, res) => {
+router.post('/', authenticate, async (req, res) => {
   try {
     const { key_name, key_value, active } = req.body;
     
@@ -98,7 +90,7 @@ router.post('/', authenticateUser, async (req, res) => {
  * Update an API key
  * PUT /api/keys/:id
  */
-router.put('/:id', authenticateUser, async (req, res) => {
+router.put('/:id', authenticate, async (req, res) => {
   try {
     const { key_name, key_value, active } = req.body;
     
@@ -140,7 +132,7 @@ router.put('/:id', authenticateUser, async (req, res) => {
  * Delete an API key
  * DELETE /api/keys/:id
  */
-router.delete('/:id', authenticateUser, async (req, res) => {
+router.delete('/:id', authenticate, async (req, res) => {
   try {
     await apiKeyModel.delete(req.params.id, req.userId);
     res.json({ 
@@ -170,7 +162,7 @@ router.delete('/:id', authenticateUser, async (req, res) => {
  * Verify an API key (check if it works with Torn API)
  * POST /api/keys/:id/verify
  */
-router.post('/:id/verify', authenticateUser, async (req, res) => {
+router.post('/:id/verify', authenticate, async (req, res) => {
   try {
     // Get the API key value
     const keyValue = await apiKeyModel.getKeyValue(req.params.id, req.userId);

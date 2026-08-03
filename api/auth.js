@@ -7,6 +7,7 @@ const express = require('express');
 const router = express.Router();
 const authService = require('../services/auth/auth-service');
 const { logger } = require('../utils/logger');
+const { authenticate } = require('../middleware/auth');
 
 /**
  * Register a new user with Torn API key
@@ -14,35 +15,26 @@ const { logger } = require('../utils/logger');
  */
 router.post('/register', async (req, res) => {
   try {
-    const { apiKey, keyName } = req.body;
-    
-    if (!apiKey) {
+    const { player_id, name, username, password, preferences } = req.body;
+
+    if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'API key is required'
+        message: 'username and password are required'
       });
     }
-    
-    const result = await authService.registerWithApiKey({
-      apiKey,
-      keyName: keyName || 'Primary API Key'
-    });
-    
-    // Set session token as a cookie
-    res.cookie('session_token', result.sessionToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
-    });
-    
+
+    const user = await authService.registerUser({ player_id, name, username, password, preferences });
+
+    // Registration creates the account; the client then logs in for a session.
     res.status(201).json({
       success: true,
       message: 'User registered successfully',
-      user: result.user
+      user
     });
   } catch (error) {
     logger.error(`Registration error: ${error.message}`);
-    
+
     res.status(400).json({
       success: false,
       message: error.message || 'Registration failed'
@@ -56,32 +48,36 @@ router.post('/register', async (req, res) => {
  */
 router.post('/login', async (req, res) => {
   try {
-    const { apiKey } = req.body;
-    
-    if (!apiKey) {
+    const { username, password } = req.body;
+
+    if (!username || !password) {
       return res.status(400).json({
         success: false,
-        message: 'API key is required'
+        message: 'username and password are required'
       });
     }
-    
-    const result = await authService.authenticateWithApiKey(apiKey);
-    
-    // Set session token as a cookie
-    res.cookie('session_token', result.sessionToken, {
+
+    const { token, user } = await authService.loginUser({ username, password });
+
+    // The JWT is the session token; the auth middleware verifies it on protected
+    // routes. httpOnly so client JS can't read it; sameSite=strict so cross-site
+    // requests can't ride the cookie (CSRF) — the app talks to the API via
+    // same-origin XHR only.
+    res.cookie('session_token', token, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
-      maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+      sameSite: 'strict',
+      maxAge: 24 * 60 * 60 * 1000 // 24h — matches the JWT expiry
     });
-    
+
     res.json({
       success: true,
       message: 'Login successful',
-      user: result.user
+      user
     });
   } catch (error) {
     logger.error(`Login error: ${error.message}`);
-    
+
     res.status(401).json({
       success: false,
       message: error.message || 'Authentication failed'
@@ -107,49 +103,10 @@ router.post('/logout', (req, res) => {
  * Get current user profile
  * GET /api/auth/profile
  */
-router.get('/profile', async (req, res) => {
-  try {
-    // In a real implementation, you would extract the user ID from
-    // the authenticated session. This is a placeholder.
-    const sessionToken = req.cookies.session_token;
-    
-    if (!sessionToken) {
-      return res.status(401).json({
-        success: false,
-        message: 'Authentication required'
-      });
-    }
-    
-    // Validate the session
-    const isValid = await authService.validateSession(sessionToken);
-    
-    if (!isValid) {
-      return res.status(401).json({
-        success: false,
-        message: 'Invalid or expired session'
-      });
-    }
-    
-    // For now, return a placeholder profile
-    // In a real implementation, you would fetch the user profile
-    res.json({
-      success: true,
-      user: {
-        id: 1,
-        username: 'TestUser',
-        torn_id: 12345,
-        faction_id: 9876,
-        faction_name: 'Test Faction'
-      }
-    });
-  } catch (error) {
-    logger.error(`Profile fetch error: ${error.message}`);
-    
-    res.status(500).json({
-      success: false,
-      message: error.message || 'Failed to fetch profile'
-    });
-  }
+router.get('/profile', authenticate, (req, res) => {
+  // `authenticate` has already validated the session token and attached the
+  // account as req.user (401s on a missing/invalid token before we get here).
+  res.json({ success: true, user: req.user });
 });
 
 module.exports = router;

@@ -6,7 +6,7 @@
  */
 process.env.NODE_ENV = 'test';
 
-jest.mock('../../services/auth/auth-service', () => ({ validateSession: jest.fn() }));
+jest.mock('../../services/auth/auth-service', () => ({ verifyToken: jest.fn() }));
 jest.mock('../../services/faction-tracker/faction-tracker-service', () => ({
   getTrackedFactions: jest.fn(), trackFaction: jest.fn(), stopTracking: jest.fn(),
   start: jest.fn(), stop: jest.fn(),
@@ -21,7 +21,7 @@ const COOKIE = 'session_token=valid';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  authService.validateSession.mockResolvedValue(true);
+  authService.verifyToken.mockResolvedValue({ player_id: 1, username: 'u', torn_id: 123 });
 });
 
 describe('API: GET /api/faction-tracker/factions', () => {

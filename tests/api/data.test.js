@@ -8,7 +8,7 @@
  */
 process.env.NODE_ENV = 'test';
 
-jest.mock('../../services/auth/auth-service', () => ({ validateSession: jest.fn() }));
+jest.mock('../../services/auth/auth-service', () => ({ verifyToken: jest.fn() }));
 jest.mock('../../services/data/data-service', () => ({
   getUserData: jest.fn(), getFactionData: jest.fn(), getTornData: jest.fn(),
 }));
@@ -22,7 +22,7 @@ const COOKIE = 'session_token=valid';
 
 beforeEach(() => {
   jest.clearAllMocks();
-  authService.validateSession.mockResolvedValue(true); // authenticate() passes
+  authService.verifyToken.mockResolvedValue({ player_id: 1, username: 'u', torn_id: 123 }); // authenticate() passes
 });
 
 describe('API: GET /api/data/user', () => {

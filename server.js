@@ -45,6 +45,12 @@ const { strictLimiter, generalLimiter } = require('./middleware/rate-limit');
 app.use(['/api/auth/login', '/api/auth/register', '/api/test'], strictLimiter);
 app.use('/api', generalLimiter);
 
+// CSRF defense: state-changing /api requests must originate from our own app
+// (Sec-Fetch-Site / Origin verification). Mounted before the routers so a forged
+// cross-site request is rejected without reaching a handler. See middleware/csrf.js.
+const { verifyCsrf } = require('./middleware/csrf');
+app.use('/api', verifyCsrf);
+
 // Basic health check endpoint
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'ok', message: 'Server is running' });

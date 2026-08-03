@@ -159,6 +159,45 @@ async function initializeSchema() {
           FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
         )
       `);
+
+      // Faction wars — written/read by services/faction-tracker/war-tracker.js
+      // via getConnection(). storeWarData does a dynamic `INSERT OR REPLACE INTO
+      // faction_wars` whose column subset varies by war type, so every column is
+      // nullable and war_id is the PRIMARY KEY the upsert replaces on. Columns are
+      // the union of every field warRecord can carry (ranked/territory/raid).
+      db.run(`
+        CREATE TABLE IF NOT EXISTS faction_wars (
+          war_id INTEGER PRIMARY KEY,
+          faction_id INTEGER,
+          war_type TEXT,
+          timestamp TEXT,
+          start_time INTEGER,
+          end_time INTEGER,
+          target INTEGER,
+          winner INTEGER,
+          defending INTEGER,
+          assaulting INTEGER,
+          score INTEGER,
+          territory TEXT,
+          assaulting_faction INTEGER,
+          defending_faction INTEGER,
+          raiding_faction INTEGER
+        )
+      `);
+
+      // Per-rival-faction rows for a ranked war — storeWarFactionData does
+      // `INSERT OR REPLACE INTO faction_war_factions` keyed on (war_id, faction_id).
+      db.run(`
+        CREATE TABLE IF NOT EXISTS faction_war_factions (
+          war_id INTEGER,
+          faction_id INTEGER,
+          name TEXT,
+          score INTEGER,
+          chain INTEGER,
+          timestamp TEXT,
+          PRIMARY KEY (war_id, faction_id)
+        )
+      `);
     });
     
     // Close the database connection

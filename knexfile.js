@@ -2,7 +2,7 @@ const path = require('path');
 const dotenv = require('dotenv');
 
 // Load environment variables from .env file
-dotenv.config();
+dotenv.config({ quiet: true }); // dotenv 17 logs a banner on every load unless quiet
 
 /**
  * @file Knex configuration file

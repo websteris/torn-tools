@@ -84,15 +84,36 @@ async function getApiKeyForUser(userId) {
 }
 
 /**
+ * Normalize a user id to a positive safe integer
+ * @param {*} value - Candidate user id
+ * @returns {number|null} The id, or null if it is not a positive integer
+ */
+function toUserId(value) {
+  if (typeof value === 'string' && /^[0-9]+$/.test(value)) {
+    value = Number(value);
+  }
+  return Number.isSafeInteger(value) && value > 0 ? value : null;
+}
+
+/**
  * Get an API key from a group of users, using rotation to balance request load
  * @param {Array<number>} userIds - User IDs to try
  * @param {Array<string>} [excludeKeys=[]] - Keys to exclude
  * @returns {Promise<string|null>} API key or null if none found
  */
 async function getApiKeyForUsers(userIds, excludeKeys = []) {
-  if (!userIds || userIds.length === 0) {
+  if (!Array.isArray(userIds) || userIds.length === 0) {
     return null;
   }
+  
+  // Only integer ids may reach the IN clause below. Digit strings (ids that
+  // came back from JSON as text) are normalized; anything else rejects the call.
+  const ids = userIds.map(toUserId);
+  if (ids.some(id => id === null)) {
+    logger.warn('getApiKeyForUsers: rejected non-integer user id');
+    return null;
+  }
+  userIds = ids;
   
   try {
     // First, try to get keys from cache for faster access
@@ -126,14 +147,14 @@ async function getApiKeyForUsers(userIds, excludeKeys = []) {
     const db = getConnection();
     
     return new Promise((resolve, reject) => {
-      // Convert array to comma-separated list for SQL IN clause
-      const userIdList = userIds.join(',');
+      // One bound placeholder per id; ids never go into the SQL text
+      const placeholders = userIds.map(() => '?').join(',');
       
       db.all(`
         SELECT id, user_id
         FROM api_keys
-        WHERE user_id IN (${userIdList}) AND active = 1
-      `, [], async (err, rows) => {
+        WHERE user_id IN (${placeholders}) AND active = 1
+      `, userIds, async (err, rows) => {
         db.close();
         
         if (err) {

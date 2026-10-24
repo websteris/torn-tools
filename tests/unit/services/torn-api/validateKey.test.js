@@ -1,53 +1,51 @@
-const fetch = require('node-fetch');
+// validateApiKey now routes through the hardened TornApiClient (#56) instead of a
+// raw node-fetch URL, so we mock the client and assert it's driven via the
+// origin/encoding-checked request() path (section 'key', selections ['info']).
+jest.mock('../../../../services/torn-api/client');
+const TornApiClient = require('../../../../services/torn-api/client');
 const { validateApiKey } = require('../../../../services/torn-api/validateKey');
 
-jest.mock('node-fetch');
-const { Response } = jest.requireActual('node-fetch');
+describe('validateApiKey (routed through the hardened client)', () => {
+  // validateKey caches one shared client, so keep a single request mock and
+  // reconfigure it per test rather than swapping the instance.
+  const request = jest.fn();
 
-describe('validateApiKey', () => {
-  afterEach(() => {
-    jest.clearAllMocks();
+  beforeAll(() => {
+    TornApiClient.mockImplementation(() => ({ request }));
   });
 
-  it('should return data if access_type is "Public Only"', async () => {
-    const fakeData = { access_type: 'Public Only', selections: {} };
-    fetch.mockResolvedValueOnce(new Response(JSON.stringify(fakeData), { status: 200 }));
-
-    const result = await validateApiKey('valid-api-key');
-    expect(result).toEqual(fakeData);
-    expect(fetch).toHaveBeenCalledTimes(1);
+  beforeEach(() => {
+    request.mockReset();
   });
 
-  it('should throw error if access_type is not "Public Only"', async () => {
-    const fakeData = { access_type: 'Full Access', selections: {} };
-    fetch.mockResolvedValueOnce(new Response(JSON.stringify(fakeData), { status: 200 }));
-
-    await expect(validateApiKey('invalid-api-key')).rejects.toThrow('API key access type "Full Access" is not allowed. Only Public Only keys are permitted.');
+  it('returns data when access_type is "Public Only"', async () => {
+    const data = { access_type: 'Public Only', selections: {} };
+    request.mockResolvedValue(data);
+    await expect(validateApiKey('valid-api-key')).resolves.toEqual(data);
   });
 
-  it('should throw error if fetch returns non-ok response', async () => {
-    fetch.mockResolvedValueOnce(new Response(null, { status: 500, statusText: 'Internal Server Error' }));
-
-    await expect(validateApiKey('any-key')).rejects.toThrow('Error validating API key: Internal Server Error');
-  });
-
-  it('should call fetch with the correct URL', async () => {
-    const fakeData = { access_type: 'Public Only', selections: {} };
-    fetch.mockResolvedValueOnce(new Response(JSON.stringify(fakeData), { status: 200 }));
-
+  it('drives the request through the hardened client (section key, info)', async () => {
+    request.mockResolvedValue({ access_type: 'Public Only' });
     await validateApiKey('my-test-key');
-    expect(fetch).toHaveBeenCalledWith('https://api.torn.com/key/?key=my-test-key&selections=info');
+    expect(request).toHaveBeenCalledWith(expect.objectContaining({
+      section: 'key', apiKey: 'my-test-key', selections: ['info'],
+    }));
   });
 
-  it('should throw an error if fetch rejects with an error', async () => {
-    fetch.mockRejectedValueOnce(new Error('Network failure'));
-
-    await expect(validateApiKey('any-key')).rejects.toThrow('Network failure');
+  it('throws if access_type is not "Public Only"', async () => {
+    request.mockResolvedValue({ access_type: 'Full Access', selections: {} });
+    await expect(validateApiKey('higher-access')).rejects.toThrow(
+      'API key access type "Full Access" is not allowed. Only Public Only keys are permitted.');
   });
 
-  it('should throw an error if JSON parsing fails', async () => {
-    fetch.mockResolvedValueOnce(new Response('invalid json data', { status: 200 }));
-
-    await expect(validateApiKey('any-key')).rejects.toThrow();
+  it('throws on a Torn API error body (e.g. an invalid key)', async () => {
+    request.mockResolvedValue({ error: { code: 2, error: 'Incorrect key' } });
+    await expect(validateApiKey('bad-key')).rejects.toThrow(
+      'Error validating API key: Incorrect key');
   });
-}); 
+
+  it('propagates a transport/HTTP error from the client', async () => {
+    request.mockRejectedValue(new Error('API request failed: Network failure'));
+    await expect(validateApiKey('any-key')).rejects.toThrow('API request failed: Network failure');
+  });
+});

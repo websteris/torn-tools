@@ -20,7 +20,6 @@ try {
 const axios = require('axios');
 const NodeCache = require('node-cache');
 const TornApiClient = require('../../../../services/torn-api/client');
-const fetch = require('node-fetch');
 const { getUserData, getWarOpponents } = require('../../../../services/torn-api/client');
 
 // Mock dependencies
@@ -34,9 +33,6 @@ jest.mock('../../../../utils/logger', () => ({
     error: jest.fn()
   }
 }));
-
-jest.mock('node-fetch');
-const { Response } = jest.requireActual('node-fetch');
 
 // Helper to create mock response
 const createMockResponse = (data) => ({ 
@@ -312,74 +308,71 @@ describe('Module: TornApiClient', () => {
   });
 });
 
-describe('Torn API Client', () => {
-  // Import the client after mocking dependencies
-  const { getUserData, getWarOpponents } = require('../../../../services/torn-api/client');
-  
-  afterEach(() => {
+// The standalone helpers now route through the hardened TornApiClient (#56), so
+// they no longer hit node-fetch. Drive them by spying on the client's request()
+// — the same origin/encoding-checked path the class methods use.
+describe('standalone helpers (routed through the hardened client)', () => {
+  let requestSpy;
+
+  beforeEach(() => {
     jest.clearAllMocks();
+    axios.create.mockReturnValue({
+      get: jest.fn(),
+      interceptors: { response: { use: jest.fn() } },
+    });
+    NodeCache.mockImplementation(() => ({
+      get: jest.fn(), set: jest.fn(), del: jest.fn(), flushAll: jest.fn(),
+      options: { stdTTL: 60 },
+    }));
+    requestSpy = jest.spyOn(TornApiClient.prototype, 'request');
+  });
+
+  afterEach(() => {
+    requestSpy.mockRestore();
   });
 
   describe('getUserData', () => {
-    it('should fetch user data successfully', async () => {
-      const mockUserData = {
-        player_id: 123456,
-        name: 'TestUser',
-        level: 15,
-        faction: {
-          faction_id: 12345,
-          faction_name: 'Test Faction'
-        }
-      };
-
-      fetch.mockResolvedValueOnce(new Response(JSON.stringify(mockUserData), { status: 200 }));
-
-      const result = await getUserData();
+    it('fetches user data via the client (section user)', async () => {
+      const mockUserData = { player_id: 123456, name: 'TestUser' };
+      requestSpy.mockResolvedValue(mockUserData);
+      const result = await getUserData('k');
       expect(result).toEqual(mockUserData);
-      expect(fetch).toHaveBeenCalledTimes(1);
-      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('https://api.torn.com/user/'));
+      expect(requestSpy).toHaveBeenCalledWith(expect.objectContaining({ section: 'user' }));
     });
 
-    it('should handle API errors', async () => {
-      const errorResponse = { error: { code: 2, error: 'Incorrect key' } };
-      fetch.mockResolvedValueOnce(new Response(JSON.stringify(errorResponse), { status: 200 }));
-
-      await expect(getUserData()).rejects.toThrow('API Error: Incorrect key');
+    it('throws on a Torn API error body', async () => {
+      requestSpy.mockResolvedValue({ error: { code: 2, error: 'Incorrect key' } });
+      await expect(getUserData('k')).rejects.toThrow('API Error: Incorrect key');
     });
 
-    it('should handle network errors', async () => {
-      fetch.mockRejectedValueOnce(new Error('Network failure'));
-      await expect(getUserData()).rejects.toThrow('Network failure');
+    it('propagates a network error', async () => {
+      requestSpy.mockRejectedValue(new Error('Network failure'));
+      await expect(getUserData('k')).rejects.toThrow('Network failure');
     });
   });
 
   describe('getWarOpponents', () => {
-    it('should fetch war opponents successfully', async () => {
-      const mockWarData = [
-        { id: 12345, name: 'Enemy Faction 1', score: 1000 },
-        { id: 67890, name: 'Enemy Faction 2', score: 2000 }
-      ];
-
-      fetch.mockResolvedValueOnce(new Response(JSON.stringify(mockWarData), { status: 200 }));
-
-      const result = await getWarOpponents();
-      expect(result).toEqual(mockWarData);
-      expect(fetch).toHaveBeenCalledTimes(1);
-      expect(fetch).toHaveBeenCalledWith(expect.stringContaining('https://api.torn.com/faction/'));
+    it('requests faction rankedwars and returns the opponents', async () => {
+      requestSpy.mockResolvedValue({ ranked_wars: { 1: { id: 12345 }, 2: { id: 67890 } } });
+      const result = await getWarOpponents('k');
+      expect(result).toEqual([{ id: 12345 }, { id: 67890 }]);
+      expect(requestSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ section: 'faction', selections: ['rankedwars'] }));
     });
 
-    it('should handle API errors', async () => {
-      const errorResponse = { error: { code: 5, error: 'Too many requests' } };
-      fetch.mockResolvedValueOnce(new Response(JSON.stringify(errorResponse), { status: 200 }));
-
-      await expect(getWarOpponents()).rejects.toThrow('API Error: Too many requests');
+    it('accepts an already-shaped array response', async () => {
+      requestSpy.mockResolvedValue([{ id: 1 }, { id: 2 }]);
+      expect(await getWarOpponents('k')).toEqual([{ id: 1 }, { id: 2 }]);
     });
 
-    it('should handle empty response', async () => {
-      fetch.mockResolvedValueOnce(new Response(JSON.stringify([]), { status: 200 }));
+    it('throws on a Torn API error body', async () => {
+      requestSpy.mockResolvedValue({ error: { code: 5, error: 'Too many requests' } });
+      await expect(getWarOpponents('k')).rejects.toThrow('API Error: Too many requests');
+    });
 
-      const result = await getWarOpponents();
-      expect(result).toEqual([]);
+    it('returns [] on an empty response', async () => {
+      requestSpy.mockResolvedValue({});
+      expect(await getWarOpponents('k')).toEqual([]);
     });
   });
 });

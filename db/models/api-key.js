@@ -6,9 +6,21 @@
 const crypto = require('crypto');
 const { getConnection } = require('../schema');
 const { logger } = require('../../utils/logger');
+const { requireSecret } = require('../../utils/secret');
 
-// Encryption settings - in production, these should be in a secure config
-const ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || 'your-secure-encryption-key-min-32-chars'; // 32 bytes
+// AES-256-CBC key for encrypting API keys at rest. Required from the
+// environment (no committed default, which would be a public key); in
+// production a missing value is fatal. See utils/secret.js. The raw secret
+// bytes are used as the key (unchanged from before) so existing ciphertext
+// still decrypts — we only validate the length up front instead of letting
+// createCipheriv throw a cryptic "Invalid key length" at first use.
+const ENCRYPTION_KEY = Buffer.from(requireSecret('ENCRYPTION_KEY', { bytes: 16 }), 'utf8');
+if (ENCRYPTION_KEY.length !== 32) {
+  throw new Error(
+    `ENCRYPTION_KEY must be exactly 32 bytes for aes-256-cbc (got ` +
+      `${ENCRYPTION_KEY.length}). Set ENCRYPTION_KEY to a 32-character value.`
+  );
+}
 const ENCRYPTION_IV_LENGTH = 16; // 16 bytes for AES
 
 /**
@@ -26,7 +38,7 @@ class ApiKeyModel {
     const iv = crypto.randomBytes(ENCRYPTION_IV_LENGTH);
     
     // Create cipher with key and iv
-    const cipher = crypto.createCipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
+    const cipher = crypto.createCipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
     
     // Encrypt the API key
     let encrypted = cipher.update(apiKey, 'utf8', 'hex');
@@ -55,7 +67,7 @@ class ApiKeyModel {
     const encrypted = parts[1];
     
     // Create decipher
-    const decipher = crypto.createDecipheriv('aes-256-cbc', Buffer.from(ENCRYPTION_KEY), iv);
+    const decipher = crypto.createDecipheriv('aes-256-cbc', ENCRYPTION_KEY, iv);
     
     // Decrypt the API key
     let decrypted = decipher.update(encrypted, 'hex', 'utf8');

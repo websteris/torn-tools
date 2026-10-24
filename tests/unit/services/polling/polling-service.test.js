@@ -75,12 +75,17 @@ describe('scheduling', () => {
 });
 
 describe('DB-reader helpers', () => {
-  test('_getActiveUsers maps rows + decrypted keys', async () => {
-    getConnection.mockReturnValue(fakeDb({ allRows: [{ id: 1, username: 'u', torn_id: 5 }] }));
+  test('_getActiveUsers decrypts with (api_keys.id, user_id) and keeps the user', async () => {
+    getConnection.mockReturnValue(fakeDb({
+      allRows: [{ id: 1, username: 'u', torn_id: 5, key_id: 10 }],
+    }));
     apiKeyModel.getKeyValue.mockResolvedValue('k');
     await expect(polling._getActiveUsers()).resolves.toEqual([
       { id: 1, username: 'u', torn_id: 5, apiKey: 'k' },
     ]);
+    // The bug (#55): getKeyValue was called (user_id, user_id) — the KEY row id
+    // must be the api_keys.id (key_id), with the user id second.
+    expect(apiKeyModel.getKeyValue).toHaveBeenCalledWith(10, 1);
   });
 
   test('_getActiveUsers resolves [] when there are no rows', async () => {
@@ -105,6 +110,31 @@ describe('DB-reader helpers', () => {
   test('_getActiveFactions resolves an array without throwing', async () => {
     getConnection.mockReturnValue(fakeDb({ allRows: [] }));
     await expect(polling._getActiveFactions()).resolves.toEqual(expect.any(Array));
+  });
+
+  test('_getActiveFactions decrypts with (api_keys.id, user_id) and keeps the faction', async () => {
+    getConnection.mockReturnValue(fakeDb({
+      allRows: [{ faction_id: 500, faction_name: 'F', user_id: 1, key_id: 10 }],
+    }));
+    apiKeyModel.getKeyValue.mockResolvedValue('k');
+    await expect(polling._getActiveFactions()).resolves.toEqual([
+      { faction_id: 500, faction_name: 'F', apiKey: 'k' },
+    ]);
+    // The bug (#55): getKeyValue got row.id (undefined) twice -> always "not
+    // found" -> every faction silently skipped. Must be (key_id, user_id).
+    expect(apiKeyModel.getKeyValue).toHaveBeenCalledWith(10, 1);
+  });
+
+  test('_getActiveFactions query dedupes by faction (GROUP BY), not by member key', async () => {
+    // Pin the intended shape: one row per faction. Capture the SQL the helper runs.
+    let sql = '';
+    getConnection.mockReturnValue({
+      all: (q, _params, cb) => { sql = q; cb(null, []); },
+      close: () => {},
+    });
+    await polling._getActiveFactions();
+    expect(sql).toMatch(/GROUP BY\s+u\.faction_id/i);
+    expect(sql).not.toMatch(/DISTINCT/i);
   });
 });
 

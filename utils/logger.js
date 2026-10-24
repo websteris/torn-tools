@@ -52,7 +52,14 @@ const logger = winston.createLogger({
       )
     })
   ],
-  exitOnError: false
+  // Keep running after an uncaught exception (a long-lived server stays up),
+  // but mark the process as failed: an exception that does end the process,
+  // such as a missing secret at startup in production, must exit 1, not 0, so
+  // a supervisor sees the failure.
+  exitOnError: () => {
+    process.exitCode = 1;
+    return false;
+  }
 });
 
 // Add file transports in non-test environments
@@ -74,13 +81,15 @@ if (process.env.NODE_ENV !== 'test') {
     })
   );
   
-  // Handle uncaught exceptions
+  // Handle uncaught exceptions: to the log file and to stderr, so a fatal
+  // startup error is visible on the console too.
   logger.exceptions.handle(
     new winston.transports.File({ 
       filename: path.join(LOG_DIR, 'exceptions.log'),
       maxsize: 5242880, // 5MB
       maxFiles: 5
-    })
+    }),
+    new winston.transports.Console({ stderrLevels: ['error'] })
   );
 }
 

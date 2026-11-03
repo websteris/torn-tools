@@ -32,7 +32,7 @@
     "node-fetch": "^2.7.0",
     "pg": "^8.22.0",
     "winston": "^3.13.0",
-    "zod": "^4.4.3"
+    "zod": "^4.6.6"
   },
   "devDependencies": {
     "jest": "^30.5.2",
